@@ -1,0 +1,72 @@
+# BMM Workflow Status - bet-bot
+#
+# This file tracks progress through the BMad Method phases.
+# Implementation phase is tracked separately in sprint-status.yaml
+#
+# STATUS DEFINITIONS:
+# ==================
+# Initial Status (before completion):
+#   - required: Must be completed to progress
+#   - optional: Can be completed but not required
+#   - recommended: Strongly suggested but not required
+#   - conditional: Required only if certain conditions met (e.g., if_has_ui)
+#
+# Completion Status:
+#   - {file-path}: File created/found (e.g., "docs/product-brief.md")
+#   - skipped: Optional/conditional workflow that was skipped
+
+generated: "2025-11-24T14:30:00Z"
+project: "bet-bot"
+project_type: "greenfield"
+selected_track: "quick-flow"
+field_type: "greenfield"
+workflow_path: ".bmad/bmm/workflows/workflow-status/paths/quick-flow-greenfield.yaml"
+
+workflow_status:
+  - phase: 0
+    name: "Discovery (Optional)"
+    optional: true
+    status: "skipped"
+    note: "User completed research and brainstorm independently"
+    workflows:
+      - id: "brainstorm-project"
+        status: "skipped"
+        reason: "User indicated already completed"
+      - id: "research"
+        status: "skipped"
+        reason: "User indicated already completed"
+
+  - phase: 1
+    name: "Planning"
+    required: true
+    status: "completed"
+    note: "Planning artifacts already exist - ready for implementation"
+    workflows:
+      - id: "tech-spec"
+        status: "docs/technical-spec.md"
+        completed_date: "2025-11-24"
+        note: "Technical Specification v1.0 with full architecture"
+      - id: "product-brief"
+        status: "docs/product-brief-bet-bot-2025-11-24.md"
+        completed_date: "2025-11-24"
+        note: "Comprehensive product vision and requirements"
+      - id: "development-stories"
+        status: "docs/development-stories.md"
+        completed_date: "2025-11-24"
+        note: "39 user stories across 9 implementation phases"
+
+  - phase: 2
+    name: "Implementation"
+    required: true
+    status: "pending"
+    note: "Next: Run sprint-planning to create sprint-status.yaml"
+    workflows:
+      - id: "sprint-planning"
+        status: "required"
+        agent: "sm"
+        command: "/bmad:bmm:workflows:sprint-planning"
+        note: "Creates sprint tracking from existing stories - subsequent work tracked in sprint-status.yaml, not this file"
+
+next_workflow: "sprint-planning"
+next_agent: "sm"
+next_command: "/bmad:bmm:workflows:sprint-planning"
