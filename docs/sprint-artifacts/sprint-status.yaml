@@ -45,12 +45,12 @@ development_status:
   2-2-integrate-api-football-sdk: done
   2-3-implement-espn-form-data-scraper: done
   2-4-fetch-odds-from-primary-source: done
-  2-5-implement-graceful-degradation-for-data-sources: backlog
+  2-5-implement-graceful-degradation-for-data-sources: done
   phase-2-retrospective: optional
 
   # PHASE 3: Data Consolidation & Validation
   phase-3: backlog
-  3-1-create-data-consolidation-pipeline: backlog
+  3-1-create-data-consolidation-pipeline: done
   3-2-implement-data-freshness-validation: backlog
   3-3-create-data-quality-scoring: backlog
   phase-3-retrospective: optional
