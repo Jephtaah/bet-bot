@@ -15,7 +15,7 @@
 
 ### Core Dependencies
 - **Data Handling:** `pandas` (data transformation), `pydantic` (schema validation)
-- **Async/Concurrency:** `asyncio` (native), `aiohttp` (async HTTP)
+- **Async/Concurrency:** `asyncio` (native), `httpx` (async HTTP)
 - **API Integration:** `openai` (official OpenAI SDK)
 - **Web Scraping:** `requests`, `beautifulsoup4` (ESPN/FlashScore)
 - **Terminal UI:** `rich` (beautiful formatting, tables, colors)
