@@ -1,0 +1,204 @@
+<story-context id="{bmad_folder}/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>4</storyId>
+    <title>Fetch Odds from Primary Source</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-26</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/2-4-fetch-odds-from-primary-source.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>As a developer</asA>
+    <iWant>I want to fetch current odds for all available markets from the primary API source</iWant>
+    <soThat>edge calculation has accurate, fresh pricing data for all betting markets</soThat>
+    <tasks>
+      - [ ] Task 1: Review API-Football odds endpoint structure (AC: #2, #3, #5)
+      - [ ] Task 2: Implement fetch_odds() function (AC: #1, #2, #4, #5)
+      - [ ] Task 3: Implement market-to-dict transformation (AC: #3, #4)
+      - [ ] Task 4: Implement odds freshness validation (AC: #6, #9)
+      - [ ] Task 5: Implement graceful degradation for missing markets (AC: #7)
+      - [ ] Task 6: Implement odds validation (AC: #8)
+      - [ ] Task 7: Implement error handling (AC: #12, #13, #14)
+      - [ ] Task 8: Update API-Football fetcher module (AC: #1)
+      - [ ] Task 9: Write unit tests (AC: #10, #11)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Implement `fetch_odds(fixture_id: str) -> Odds` function within `/src/bet_bot/data/fetchers/api_football.py`
+    2. Use API-Football's `/v3/odds` endpoint as primary source for all odds data
+    3. Fetch all available markets: match result (1X2), total goals (Over/Under 2.5, 3.5), corners, cards
+    4. Map API response to `Odds` model with nested `Market` objects containing outcome-to-odds mappings
+    5. Include `timestamp` field in response for freshness validation (extracted from API response)
+    6. Validate odds freshness: flag odds > 1 hour old as stale but continue processing (don't reject)
+    7. Handle missing markets gracefully: skip markets not available in API response (don't fail entire call)
+    8. Normalize all odds values: must be >= 1.0 (reject invalid odds)
+    9. Log odds age for each fixture (informational, not blocking)
+    10. Return `Odds` object with all available markets or raise appropriate exception on critical failure
+    11. All error handling follows CLAUDE.md patterns: custom exceptions, structured logging, graceful degradation
+    12. Handle 4xx errors: 404 → return None with warning log, 401/403 → raise APIAuthenticationError
+    13. Handle 5xx errors: raise APIServerError (will be retried by decorator)
+    14. Handle network/timeout errors: return None with warning log
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>API Integrations - API-Football (Primary Data Source)</section>
+        <snippet>API-Football endpoints: fixtures, team statistics, injuries, odds. Rate limit: 300 req/min. Data quality: excellent for major leagues. Critical: handle nested response structures, respect rate limits.</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary</title>
+        <section>Section 5: Odds Data</section>
+        <snippet>Odds specification: bookmaker_name (Pinnacle, etc), odds_updated_at (ISO 8601), freshness requirement &lt; 1h. Markets: match result (home/draw/away), total goals (over/under 2.5, 3.5), corners, cards. All odds >= 1.0. Timestamp for validation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/2-2-integrate-api-football-sdk.md</path>
+        <title>Story 2.2: Integrate API-Football SDK</title>
+        <section>Dev Notes - Learnings from Previous Story</section>
+        <snippet>Story 2.2 provides: httpx.AsyncClient singleton, tenacity retry decorator (exp backoff 2-60s, max 5), RateLimiter class (token bucket, 100 req/min), custom exception hierarchy, structured logging, get_api_headers() function, rate limit handling with Retry-After header parsing.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/2-4-fetch-odds-from-primary-source.md</path>
+        <title>Story 2.4 (Current Story)</title>
+        <section>Dev Notes - Architecture Alignment - API-Football Odds Endpoint Response Structure</section>
+        <snippet>Endpoint: /v3/odds. Response structure: nested bookmakers → bets → values. Transform: extract update field (timestamp), extract bookmaker name, for each market transform values[] array to dict (outcome: odds), handle missing markets gracefully, validate odds >= 1.0.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/bet_bot/models/odds.py</path>
+        <kind>model</kind>
+        <symbol>Odds, Market</symbol>
+        <lines>89-149</lines>
+        <reason>Pydantic models used in this story: Odds(fixture_id, bookmaker_name, odds_updated_at, markets[]), Market(market_type, odds dict). Models include validators for odds >= 1.0, non-empty strings.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/fetchers/api_football.py</path>
+        <kind>module</kind>
+        <symbol>get_http_client, fetch_with_retry, fetch_with_rate_limit, RateLimiter, get_api_headers, api_football_limiter</symbol>
+        <lines>59-341</lines>
+        <reason>Story 2.2 provided: HTTP client singleton, retry decorator with exponential backoff (max 5 attempts, 2-60s), rate limiter token bucket (100 req/min), error handling (401/403/404/429/5xx), Retry-After header parsing. Story 2.4 will add fetch_odds() function in this module.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>module</kind>
+        <symbol>APIError, APIAuthenticationError, APIRateLimitError, APIServerError, DataValidationError, DataStaleError</symbol>
+        <lines>38-126</lines>
+        <reason>Custom exception hierarchy for error handling. Story 2.4 uses: APIAuthenticationError (401/403), APIRateLimitError (429), APIServerError (5xx), DataValidationError (invalid odds). See CLAUDE.md patterns.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/fetchers/api_football.py</path>
+        <kind>function</kind>
+        <symbol>fetch_fixtures, fetch_team_form, fetch_injuries</symbol>
+        <lines>343-600+</lines>
+        <reason>Pattern examples for implementation: all three functions use fetch_with_rate_limit(), handle ValidationError gracefully (log + skip), return None on 404/timeout, raise exceptions on 401/403/5xx. Story 2.4 will follow identical pattern for fetch_odds().</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/fetchers/__init__.py</path>
+        <kind>module</kind>
+        <symbol>__all__</symbol>
+        <reason>Module exports: fetch_odds() must be added to __all__ export list after implementation</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="python">
+        <package name="httpx" version=">=0.24.0">Async HTTP client with connection pooling</package>
+        <package name="pydantic" version=">=2.0.0">Data validation and parsing</package>
+        <package name="tenacity" version=">=8.2.0">Retry logic with exponential backoff</package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    1. MUST use existing HTTP client from Story 2.2 (get_http_client singleton, never create new clients)
+    2. MUST use tenacity retry decorator pattern from Story 2.2 (do NOT implement custom retry logic)
+    3. MUST use existing RateLimiter from Story 2.2 (api_football_limiter.acquire() before each request)
+    4. MUST use custom exception hierarchy from exceptions.py (APIAuthenticationError, APIServerError, etc.)
+    5. MUST follow Pydantic model validation patterns (don't ignore ValidationError)
+    6. MUST handle Retry-After headers for 429 rate limit responses (pattern from Story 2.2)
+    7. MUST implement graceful degradation (return None for 404/timeout, don't fail entire call)
+    8. MUST log all errors with context (URL, status code, fixture_id) using logger.error/warning/info
+    9. MUST validate odds values >= 1.0 (use Market validator, skip invalid outcomes)
+    10. MUST extract and preserve timestamp from API response for freshness validation
+    11. All error handling must follow CLAUDE.md patterns (structured logging, context, no bare except)
+    12. Response validation must use Pydantic models (not manual dict checking)
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>fetch_odds()</name>
+      <kind>async function</kind>
+      <signature>async def fetch_odds(fixture_id: str) -> Odds | None</signature>
+      <path>src/bet_bot/data/fetchers/api_football.py</path>
+      <description>Fetch current odds for all available markets from API-Football /v3/odds endpoint. Returns Odds object with timestamp and all available markets, or None for 404/timeout/network errors. Raises APIAuthenticationError (401/403) or APIServerError (5xx).</description>
+    </interface>
+    <interface>
+      <name>get_http_client()</name>
+      <kind>async function</kind>
+      <signature>async def get_http_client() -> httpx.AsyncClient</signature>
+      <path>src/bet_bot/data/fetchers/api_football.py</path>
+      <description>Global HTTP client singleton. MUST be used for all API calls (don't create new clients). Already implemented in Story 2.2.</description>
+    </interface>
+    <interface>
+      <name>RateLimiter.acquire()</name>
+      <kind>async method</kind>
+      <signature>async def acquire() -> None</signature>
+      <path>src/bet_bot/data/fetchers/api_football.py</path>
+      <description>Token bucket rate limiter for API-Football (100 req/min). MUST call before each API request. Already implemented in Story 2.2.</description>
+    </interface>
+    <interface>
+      <name>fetch_with_rate_limit()</name>
+      <kind>async function</kind>
+      <signature>async def fetch_with_rate_limit(url: str, api_name: str = "API-Football") -> httpx.Response | None</signature>
+      <path>src/bet_bot/data/fetchers/api_football.py</path>
+      <description>Wrapper combining rate limiting + retry logic + error handling. Handles 401/403 (raise), 404 (return None), 429 (with Retry-After), 5xx (raise), timeout/network (return None). Already implemented in Story 2.2. Can be used directly or as pattern reference.</description>
+    </interface>
+    <interface>
+      <name>Odds model</name>
+      <kind>Pydantic model</kind>
+      <signature>class Odds(BaseModel): fixture_id: str; bookmaker_name: str; odds_updated_at: datetime; markets: list[Market]</signature>
+      <path>src/bet_bot/models/odds.py</path>
+      <description>Data model for odds with validators. Market objects contain market_type (str) and odds dict (str → float). All odds >= 1.0 enforced by validator.</description>
+    </interface>
+    <interface>
+      <name>API-Football Odds Endpoint</name>
+      <kind>REST API endpoint</kind>
+      <signature>GET /v3/odds?fixture={fixture_id}</signature>
+      <path>https://api-football-v3.p.rapidapi.com/v3</path>
+      <description>Returns nested structure: response[] → fixture, update (timestamp), bookmakers[] → id, name, bets[] → id, name, values[] → value (outcome), odd (decimal odds). Must handle missing markets, validate odds >= 1.0.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing framework: pytest with pytest-asyncio. All async functions use @pytest.mark.asyncio. Mock httpx responses with unittest.mock (AsyncMock, patch). Test data includes API-Football odds response samples. Assertions verify: model instantiation, field mapping, odds validation, error handling, graceful degradation. See tests/unit/test_api_football.py for examples (TestHTTPClient, TestRateLimiter classes).
+    </standards>
+    <locations>
+      tests/unit/test_api_football.py - Unit tests for API-Football client
+      tests/integration/ - Integration test directory (for future full-pipeline tests)
+    </locations>
+    <ideas>
+      [1.1] Test fetch_odds() with valid fixture_id and multiple markets (AC #1, #3, #4) → verify Odds object with Market objects, verify outcomes dict structure
+      [1.2] Test fetch_odds() with fixture_id that has no odds (404) → verify returns None, logs warning
+      [2.1] Test market transformation (AC #3, #4) → verify values[] array transformed to dict[str, float], verify outcome names preserved
+      [2.2] Test market transformation with missing bookmakers → verify graceful skip, only available markets returned
+      [3.1] Test odds freshness validation (AC #6, #9) → fresh odds (< 1h) verify INFO log, stale odds (> 1h) verify WARNING log but still returned
+      [3.2] Test timestamp extraction and storage (AC #5) → verify timestamp field in Odds object matches API response update field
+      [4.1] Test odds value validation (AC #8) → verify odds >= 1.0 enforced, invalid outcomes skipped
+      [4.2] Test validation failure handling (AC #6) → invalid odds caught by Pydantic validator, function returns None with error log
+      [5.1] Test error handling 401/403 (AC #12) → verify APIAuthenticationError raised with context
+      [5.2] Test error handling 404 (AC #12) → verify returns None, warning logged, no exception raised
+      [5.3] Test error handling 5xx (AC #13) → verify APIServerError raised (retry decorator will retry)
+      [5.4] Test error handling timeout/network (AC #14) → verify returns None, warning logged
+      [6.1] Test rate limiting (AC #8 pattern) → verify api_football_limiter.acquire() called before request
+      [7.1] Test export in __init__.py (AC #1) → verify fetch_odds in module exports
+      Coverage target: 85%+ for fetch_odds() function
+    </ideas>
+  </tests>
+</story-context>

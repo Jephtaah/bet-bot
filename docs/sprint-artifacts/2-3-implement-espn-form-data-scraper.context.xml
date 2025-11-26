@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>3</storyId>
+    <title>Implement ESPN Form Data Scraper</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/2-3-implement-espn-form-data-scraper.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>scrape ESPN for team form data as a backup source</iWant>
+    <soThat>I have redundancy if API-Football fails</soThat>
+    <tasks>
+    - Task 1: Set up ESPN scraper infrastructure (AC: #1, #10)
+      - Create `/src/bet_bot/data/fetchers/espn_scraper.py` module
+      - Initialize httpx.AsyncClient for scraper (reuse global client from api_football.py)
+      - Implement rate limiter for ESPN scraper (1 request per 2s, 30 per minute max)
+      - Create ESPN URL builder function for constructing team statistics URLs
+      - Document ESPN URL patterns and CSS selector targets
+
+    - Task 2: Implement HTML parsing with BeautifulSoup4 (AC: #2, #3, #5)
+      - Install beautifulsoup4 in requirements.txt (add if not present)
+      - Create helper function to parse match results table from ESPN HTML
+      - Extract last 5-10 match results (W/D/L) from results table
+      - Extract goals for and goals against averages from team statistics
+      - Extract win percentage for different time windows
+      - Handle missing HTML elements gracefully (return partial data, not None)
+      - Handle malformed HTML without crashing (catch BeautifulSoup parsing errors)
+      - Add logging for parsing operations (success, missing elements, errors)
+
+    - Task 3: Implement fetch_team_form_espn() function (AC: #3, #8, #9)
+      - Create async function: `fetch_team_form_espn(team_name: str, league: str) -> Optional[TeamForm]`
+      - Query ESPN for team statistics page
+      - Parse HTML response to extract form data
+      - Construct TeamForm object with scraped values
+      - Validate constructed TeamForm against Pydantic model
+      - Return TeamForm object on success, None on failure
+      - Include timestamp in logs for performance tracking
+
+    - Task 4: Implement retry logic with timeout (AC: #4)
+      - Use tenacity retry decorator (max 2 attempts, NOT 5)
+      - Configure exponential backoff (1s, 2s base for short timeouts)
+      - Set HTTP request timeout to 10s total (ESPN can be slow)
+      - Implement custom retry condition for specific errors only
+      - Don't retry on 403/404 (ESPN explicitly blocks scrapers sometimes)
+      - Log retry attempts with context
+
+    - Task 5: Implement error handling and logging (AC: #5, #6, #9)
+      - Create custom exception: `ScraperError` (if not already in exceptions.py)
+      - Catch httpx.TimeoutException, httpx.ConnectError, httpx.NetworkError
+      - Catch BeautifulSoup parsing errors (TypeError, AttributeError on missing elements)
+      - Catch Pydantic ValidationError when constructing TeamForm
+      - Log all errors with context: URL attempted, error type, error message
+      - Return None for all error cases (graceful degradation)
+      - Never expose raw stack traces (log full error but return None to caller)
+
+    - Task 6: Implement backup-only activation (AC: #7)
+      - Create function: `fetch_team_form_with_fallback(team_id, league_id) -> Optional[TeamForm]`
+      - In `/src/bet_bot/data/fetchers/__init__.py`: Try API-Football first, then ESPN
+      - Call ESPN scraper ONLY if API-Football returns None
+      - Log which source was used (API-Football or ESPN)
+      - Update export in `__init__.py` to expose fallback function
+      - Document in code that this is backup-only
+
+    - Task 7: Write unit and integration tests (AC: #2, #5, #8, #9)
+      - Create `/tests/unit/test_espn_scraper.py` with mocked HTML responses
+      - Test HTML parsing with sample ESPN page HTML
+      - Test extraction of match results (W/D/L patterns)
+      - Test goal average calculations
+      - Test handling of missing HTML elements (graceful degradation)
+      - Test handling of malformed HTML
+      - Test retry logic: verify 2 attempts max, exponential backoff
+      - Test rate limiting: verify 1 request per 2s enforced
+      - Test TeamForm model mapping: verify all required fields populated
+      - Test error handling: verify None returned for various error types
+      - Test fallback behavior: verify ESPN called only if API-Football fails
+      - Target 85%+ code coverage (slightly lower than API-Football due to scraper fragility)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+  1. Create `/src/bet_bot/data/fetchers/espn_scraper.py` module
+  2. Implement web scraping using BeautifulSoup4 for HTML parsing
+  3. Extract team form data from ESPN URLs: last 5-10 results, goals for/against, win percentage
+  4. Add retry logic (2 attempts with exponential backoff and timeout)
+  5. Handle HTML parsing errors gracefully (missing elements, malformed HTML)
+  6. Log scraping status (success/failure) with URL and error context
+  7. Never call ESPN scraper unless API-Football fails (backup-only activation)
+  8. Map scraped data to `TeamForm` model with all required fields
+  9. Return TeamForm object with validated data or None on failure
+  10. Implement rate limiting to avoid scraper being blocked (max 1 request per 2 seconds)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Section 2: ESPN Scraper Integration</section>
+        <snippet>ESPN scraper integration overview: Purpose is backup form data, head-to-head history if API-Football fails. Scraping strategy targets ESPN soccer URLs, extract results table, CSS selectors for team stats. Fragility is medium (ESPN redesigns occasionally, requires maintenance). Fallback: If scrape fails, continue without ESPN data (graceful degradation). Activation: ONLY call if API-Football form is missing or stale.</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary</title>
+        <section>Section 2: Team Form Data</section>
+        <snippet>Team form data required: last_5_results, last_10_results (array[W/D/L]), win_percentage_5, win_percentage_10 (0.0-1.0 range), goals_for_avg_5, goals_for_avg_10, goals_against_avg_5, goals_against_avg_10. Freshness requirement: &lt; 24h old (OK for ESPN since it's backup). Source: API-Football + ESPN. TeamForm model fields: team_id, team_name, last_5_results, last_10_results, win_percentage_5, win_percentage_10, goals_avg_home, goals_avg_away, goals_against_avg_home, goals_against_avg_away.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Standards</title>
+        <section>HTTP Client Architecture &amp; Web Scraping Patterns</section>
+        <snippet>CRITICAL MANDATORY: Use httpx.AsyncClient singleton (NOT requests or aiohttp). Use tenacity for retry logic with exponential backoff. Implement custom exception hierarchy for error handling. Validate response with Pydantic models. Use async/await for all I/O. Implement client-side rate limiting using token bucket algorithm. For web scrapers: Use BeautifulSoup4 for HTML parsing. Handle missing HTML elements gracefully (return partial data). Graceful degradation pattern: return None on failure, never crash pipeline.</snippet>
+      </doc>
+      <doc>
+        <path>docs/development-stories.md</path>
+        <title>Development Stories</title>
+        <section>Story 2.3: Implement ESPN Form Data Scraper</section>
+        <snippet>User story: Scrape ESPN for team form data as backup source for redundancy. Acceptance criteria: Scraper module, HTML parsing, retry logic (2 attempts max), TeamForm mapping, backup-only activation. Definition of Done: Scraper works without crashing, handles missing elements, logs clearly when failing. Rate limiting: 1 request per 2 seconds (30 per minute max) to avoid ESPN blocking.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>src/bet_bot/models/form.py</path>
+        <kind>model</kind>
+        <symbol>TeamForm, RecentResult</symbol>
+        <lines>105-224</lines>
+        <reason>Target model for scraper output. TeamForm requires: team_id, team_name, last_5_results, last_10_results, win_percentage_5, win_percentage_10, goals_avg_home, goals_avg_away, goals_against_avg_home, goals_against_avg_away. All fields have Pydantic validators. Scraper must construct valid TeamForm instances with all required fields populated.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>module</kind>
+        <symbol>ScraperError, APIError, DataValidationError</symbol>
+        <lines>199-223</lines>
+        <reason>Custom exception hierarchy for error handling. ScraperError already defined and ready to use. Pattern: log errors with context (url, reason), return None to caller, never raise to caller for backup sources. Validates error handling pattern across project.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/fetchers/api_football.py</path>
+        <kind>module</kind>
+        <symbol>get_http_client, RateLimiter, retry_if_exception_type, tenacity decorators</symbol>
+        <lines>59-150</lines>
+        <reason>HTTP client singleton pattern and rate limiter implementation to reuse. ESPN scraper must: (1) import and reuse get_http_client() from api_football.py, (2) implement separate RateLimiter for ESPN (1 req/2s = 30/min), (3) follow retry pattern using tenacity with 2 attempts max (NOT 5), (4) use same error handling pattern (return None, log with context).</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/fetchers/__init__.py</path>
+        <kind>module</kind>
+        <symbol>fetch_team_form_with_fallback</symbol>
+        <lines>1-50</lines>
+        <reason>Module exports and fallback pattern. After Story 2.3, this file must be updated to export fetch_team_form_with_fallback() function that calls API-Football first, then ESPN as backup. Pattern: "Try API-Football first, ESPN only if primary returns None."</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/utils/logging.py</path>
+        <kind>module</kind>
+        <symbol>setup_logging, logger</symbol>
+        <lines>1-50</lines>
+        <reason>Structured logging setup. ESPN scraper must use project logger for all operations: success/failure messages, retry attempts, parsing errors, rate limit waits. Follows project pattern of logging with context (URLs, error details, timestamps).</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/config/settings.py</path>
+        <kind>module</kind>
+        <symbol>Config class</symbol>
+        <lines>1-50</lines>
+        <reason>Configuration management pattern. Project uses Config class from environment variables. Scraper doesn't need new API keys (ESPN doesn't require authentication), but follows pattern of accessing configuration via Config class.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package>httpx</package>
+        <version>&gt;=0.24.0</version>
+        <usage>Async HTTP client for fetching ESPN pages. Reuse global singleton from api_football.py. Supports 10s timeout per request (ESPN slow). Handles TimeoutException, ConnectError, NetworkError.</usage>
+      </python>
+      <python>
+        <package>beautifulsoup4</package>
+        <version>&gt;=4.12.0</version>
+        <usage>HTML parsing library. Extract match results table, CSS selectors for team stats. Already in pyproject.toml dependencies. Handle missing elements gracefully (return [] or partial data, not crash).</usage>
+      </python>
+      <python>
+        <package>tenacity</package>
+        <version>&gt;=8.2.0</version>
+        <usage>Retry decorator with exponential backoff. Configure for 2 attempts max (NOT 5 like API-Football). Min/max backoff: 1s, 2s. Don't retry 403/404 (ESPN blocks). Already installed from Story 2.2.</usage>
+      </python>
+      <python>
+        <package>pydantic</package>
+        <version>&gt;=2.0.0</version>
+        <usage>Validate TeamForm model before returning. Catch ValidationError and return None gracefully. Already installed from Story 2.1.</usage>
+      </python>
+      <python>
+        <package>asyncio</package>
+        <version>builtin</version>
+        <usage>Async/await patterns. Asyncio.Semaphore for rate limiting (implement token bucket). Asyncio.sleep for backoff delays.</usage>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - MANDATORY: Use httpx.AsyncClient singleton from api_football.py (ZERO tolerance for duplicate clients)
+    - MANDATORY: Use tenacity @retry decorator for retry logic (NOT custom sleep/retry loops)
+    - MANDATORY: Implement separate RateLimiter for ESPN (1 request per 2 seconds = 30/min max)
+    - MANDATORY: Max 2 retry attempts for scraper (NOT 5 like API-Football)
+    - MANDATORY: Don't retry 403/404 errors (ESPN blocks scrapers; retry only timeout/network errors)
+    - MANDATORY: Return None on ANY failure (never raise exceptions to caller; graceful degradation)
+    - MANDATORY: Validate all output with Pydantic TeamForm model before returning
+    - MANDATORY: Use project logger for all operations (structured logging with context)
+    - MANDATORY: BeautifulSoup4 must handle missing HTML elements gracefully (return partial data, not crash)
+    - CODE STYLE: Type hints on all functions (async def fetch_team_form_espn(team_name: str, league: str) -> Optional[TeamForm])
+    - CODE STYLE: Docstrings on all public functions (explain ESPN-specific behavior: fragile, backup-only)
+    - CODE STYLE: 10s HTTP timeout per request (ESPN is slower than API-Football)
+    - TESTING: Minimum 85%+ code coverage (slightly lower than API-Football due to scraper fragility and HTML parsing complexity)
+    - TESTING: Use mocked HTML responses in unit tests (don't hit ESPN during tests)
+    - TESTING: Test graceful degradation: verify function returns None (not exception) for parsing failures
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>fetch_team_form_espn</name>
+      <kind>async function</kind>
+      <signature>async def fetch_team_form_espn(team_name: str, league: str) -> Optional[TeamForm]</signature>
+      <path>src/bet_bot/data/fetchers/espn_scraper.py:1-50</path>
+    </interface>
+    <interface>
+      <name>fetch_team_form_with_fallback</name>
+      <kind>async function</kind>
+      <signature>async def fetch_team_form_with_fallback(team_id: str, league_id: str, team_name: str) -> Optional[TeamForm]</signature>
+      <path>src/bet_bot/data/fetchers/__init__.py:1-50</path>
+    </interface>
+    <interface>
+      <name>TeamForm</name>
+      <kind>Pydantic model</kind>
+      <signature>class TeamForm(BaseModel): team_id, team_name, last_5_results, last_10_results, win_percentage_5, win_percentage_10, goals_avg_home, goals_avg_away, goals_against_avg_home, goals_against_avg_away</signature>
+      <path>src/bet_bot/models/form.py:105-224</path>
+    </interface>
+    <interface>
+      <name>get_http_client</name>
+      <kind>async function</kind>
+      <signature>async def get_http_client() -> httpx.AsyncClient</signature>
+      <path>src/bet_bot/data/fetchers/api_football.py:121-150</path>
+    </interface>
+    <interface>
+      <name>RateLimiter</name>
+      <kind>class</kind>
+      <signature>class RateLimiter: __init__(max_requests: int, time_window: int); async def acquire()</signature>
+      <path>src/bet_bot/data/fetchers/api_football.py:59-115</path>
+    </interface>
+    <interface>
+      <name>ScraperError</name>
+      <kind>custom exception</kind>
+      <signature>class ScraperError(BetBotError): __init__(url: str, reason: str)</signature>
+      <path>src/bet_bot/exceptions.py:199-223</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+    Framework: pytest with pytest-asyncio for async tests, pytest-cov for coverage. Target 85%+ code coverage (slightly lower than API-Football due to HTML parsing complexity and scraper fragility). Test structure: Unit tests in /tests/unit/test_espn_scraper.py with mocked HTML responses and network calls. Integration tests verify TeamForm model mapping. Mocking strategy: Mock httpx.AsyncClient.get() to return sample ESPN HTML responses, mock BeautifulSoup parsing. Error scenarios: Test all failure modes return None (not exception). Rate limiting: Use asyncio.sleep() mocks to verify timing. Logging verification: Capture logger output, verify messages include URLs and error context.
+    </standards>
+
+    <locations>
+    - /tests/unit/test_espn_scraper.py (primary unit tests with mocked responses)
+    - /tests/integration/test_espn_integration.py (optional: integration with actual HTML samples)
+    - Test fixtures: /tests/fixtures/espn_sample_html.html (sample ESPN team page)
+    </locations>
+
+    <ideas>
+    - Test 1: fetch_team_form_espn() returns TeamForm on success with all fields populated (unit test with mocked HTML)
+    - Test 2: fetch_team_form_espn() returns None on httpx.TimeoutException (unit test mocking timeout)
+    - Test 3: fetch_team_form_espn() returns None on httpx.ConnectError (unit test mocking network error)
+    - Test 4: fetch_team_form_espn() returns None on malformed HTML / missing table elements (unit test with bad HTML)
+    - Test 5: fetch_team_form_espn() respects 10s request timeout (unit test verifying timeout parameter)
+    - Test 6: retry logic attempts max 2 times on transient errors (unit test mocking tenacity decorator, counting calls)
+    - Test 7: retry logic does NOT retry 403 Forbidden responses (unit test verifying custom retry condition)
+    - Test 8: retry logic does NOT retry 404 Not Found responses (unit test verifying custom retry condition)
+    - Test 9: exponential backoff delays are correct (1s first, 2s second) (unit test mocking asyncio.sleep, verifying call args)
+    - Test 10: rate limiter enforces 1 request per 2 seconds (unit test timing acquire() calls)
+    - Test 11: rate limiter allows 30 requests per minute (unit test timing acquire() calls in loop)
+    - Test 12: rate limiter enforces sequential rate limiting (unit test with asyncio.gather() calls)
+    - Test 13: parse_match_results() extracts W/D/L correctly from ESPN table (unit test with sample HTML)
+    - Test 14: parse_match_results() returns empty list on missing table (graceful degradation)
+    - Test 15: parse_goals_averages() calculates averages correctly from goal data (unit test with sample data)
+    - Test 16: parse_goals_averages() handles missing goal columns gracefully (returns 0.0 for missing)
+    - Test 17: parse_win_percentage() calculates 0.0-1.0 range correctly (unit test with sample W/D/L data)
+    - Test 18: TeamForm validation catches invalid data and raises ValidationError (unit test)
+    - Test 19: fetch_team_form_with_fallback() calls API-Football first (mock api_football.fetch_team_form)
+    - Test 20: fetch_team_form_with_fallback() calls ESPN only if API-Football returns None (mock, verify call order)
+    - Test 21: fetch_team_form_with_fallback() returns None if both API-Football and ESPN fail (mock both failures)
+    - Test 22: logging messages include URL, error type, and context on failures (capture logger, verify output)
+    - Test 23: ESPN scraper never exposes raw stack traces (unit test catching exception, verify logging sanitizes)
+    - Test 24: ESPN scraper reuses global httpx.AsyncClient (verify get_http_client() called, not new client created)
+    - Test 25: Concurrent scraper calls respect rate limiting (asyncio.gather() multiple fetch_team_form_espn() calls)
+    </ideas>
+  </tests>
+</story-context>
