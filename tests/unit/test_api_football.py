@@ -15,7 +15,7 @@ Tests cover:
 
 import asyncio
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -356,7 +356,7 @@ class TestRetryAfterHeader:
     async def test_retry_after_http_date_format(self):
         """Test Retry-After header with HTTP date format."""
         # Future date (5 seconds from now)
-        future_date = datetime.utcnow()
+        future_date = datetime.now(timezone.utc).replace(tzinfo=None)
         retry_date_str = future_date.strftime("%a, %d %b %Y %H:%M:%S GMT")
 
         mock_response = MagicMock()
@@ -740,10 +740,10 @@ class TestFetchOdds:
     @pytest.mark.asyncio
     async def test_fetch_odds_stale_odds(self):
         """Test fetch_odds logs warning for stale odds but still returns them."""
-        from datetime import datetime, timedelta
+        from datetime import timedelta
 
         # Create timestamp > 1 hour old
-        stale_time = datetime.utcnow() - timedelta(hours=2)
+        stale_time = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=2)
         stale_timestamp = stale_time.isoformat() + "+00:00"
 
         mock_response = MagicMock()

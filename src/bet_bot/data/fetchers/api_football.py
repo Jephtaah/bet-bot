@@ -24,7 +24,7 @@ import asyncio
 import logging
 import time
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 from pydantic import ValidationError
@@ -276,7 +276,7 @@ async def fetch_with_rate_limit(
                             "%a, %d %b %Y %H:%M:%S GMT"
                         )
                         wait_seconds = int(
-                            (retry_date - datetime.utcnow()).total_seconds()
+                            (retry_date - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds()
                         )
                     except ValueError:
                         wait_seconds = 60  # Default wait
@@ -693,7 +693,7 @@ async def fetch_odds(fixture_id: str) -> Odds | None:
         if odds:
             for market in odds.markets:
                 print(f"{market.market_type}: {market.odds}")
-                age_minutes = (datetime.utcnow() - odds.odds_updated_at).total_seconds() / 60
+                age_minutes = (datetime.now(timezone.utc).replace(tzinfo=None) - odds.odds_updated_at).total_seconds() / 60
                 print(f"Odds age: {age_minutes:.0f}m")
     """
     url = f"{API_BASE_URL}/odds?fixture={fixture_id}"
@@ -725,10 +725,10 @@ async def fetch_odds(fixture_id: str) -> Odds | None:
                 f"Could not parse odds timestamp for fixture {fixture_id}. "
                 f"Using current time. Raw timestamp: {timestamp_str}"
             )
-            odds_updated_at = datetime.utcnow()
+            odds_updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Calculate odds age and log
-        age = datetime.utcnow() - odds_updated_at.replace(tzinfo=None)
+        age = datetime.now(timezone.utc).replace(tzinfo=None) - odds_updated_at.replace(tzinfo=None)
         age_minutes = age.total_seconds() / 60
 
         if age_minutes < 0:
