@@ -36,15 +36,15 @@ development_status:
   1-2-install-configure-dependencies: done
   1-3-create-cli-entry-point-with-typer: done
   1-4-set-up-configuration-management: done
-  1-5-implement-structured-logging: review
+  1-5-implement-structured-logging: done
   phase-1-retrospective: optional
 
   # PHASE 2: Data Fetching Layer
   phase-2: backlog
-  2-1-create-pydantic-models-for-data-structures: backlog
-  2-2-integrate-api-football-sdk: backlog
-  2-3-implement-espn-form-data-scraper: backlog
-  2-4-fetch-odds-from-primary-source: backlog
+  2-1-create-pydantic-models-for-data-structures: done
+  2-2-integrate-api-football-sdk: done
+  2-3-implement-espn-form-data-scraper: done
+  2-4-fetch-odds-from-primary-source: done
   2-5-implement-graceful-degradation-for-data-sources: backlog
   phase-2-retrospective: optional
 
