@@ -1,0 +1,324 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2</storyId>
+    <title>Integrate API-Football SDK</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/2-2-integrate-api-football-sdk.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>to set up the API-Football client with proper authentication and implement data fetching functions</iWant>
+    <soThat>I can retrieve fixtures, team form, injuries, and odds data from the primary API source</soThat>
+    <tasks>
+- Task 1: Set up API-Football client and authentication (AC: #1, #2)
+- Task 2: Implement retry and rate limiting logic (AC: #7, #8)
+- Task 3: Implement fetch_fixtures() function (AC: #3, #9, #11, #13, #14)
+- Task 4: Implement fetch_team_form() function (AC: #4, #9, #11, #13, #14)
+- Task 5: Implement fetch_injuries() function (AC: #5, #9, #11, #13, #14)
+- Task 6: Implement fetch_odds() function (AC: #6, #9, #11, #13, #14)
+- Task 7: Implement error handling and custom exceptions (AC: #11, #12, #13, #14)
+- Task 8: Write comprehensive unit tests (AC: #11)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. Create `/src/bet_bot/data/fetchers/api_football.py` module
+2. Initialize API client with `API_FOOTBALL_KEY` from config and proper headers
+3. Implement `fetch_fixtures(date: str) -> list[Fixture]` function for fetching today's fixtures
+4. Implement `fetch_team_form(team_id: str, league_id: str) -> TeamForm` function for team statistics
+5. Implement `fetch_injuries(team_id: str) -> Injury` function for player availability data
+6. Implement `fetch_odds(fixture_id: str) -> Odds` function for current betting odds
+7. Add retry logic using tenacity (max 5 attempts, exponential backoff 2-60s)
+8. Handle rate limiting: respect Retry-After headers, implement client-side rate limiter (100 req/min)
+9. Map API-Football nested responses to Pydantic models using Field aliases
+10. Log all API calls (URL, status, timestamp) and errors with context
+11. All functions return data validated against Pydantic models or raise custom exceptions
+12. Handle 4xx errors gracefully (404 → return None, 401/403 → raise APIAuthenticationError)
+13. Handle 5xx errors with retry logic (up to 5 attempts)
+14. Handle network/timeout errors gracefully (return None with logging)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>bet-bot Technical Specification</title>
+        <section>API Integrations - API-Football</section>
+        <snippet>Primary data source for fixtures, form, injuries, odds. Endpoints: /fixtures, /teams/statistics, /injuries, /odds. Rate limit: 300 requests/minute. Pricing: ~$15/month (paid tier). Must handle nested response structures.</snippet>
+      </doc>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>bet-bot Technical Specification</title>
+        <section>System Architecture - Data Fetching Layer</section>
+        <snippet>Parallel async fetching from multiple APIs/scrapers. Key Pattern: async def fetch_all_data() using asyncio.gather(*tasks, return_exceptions=True). Error Handling: If API-Football fails → use scrape backup. If scrape fails → continue with missing data (graceful degradation).</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>bet-bot Data Dictionary</title>
+        <section>Section 1: Fixture Data</section>
+        <snippet>fixture_id (string), kickoff_time (ISO 8601), league_name, home_team_id, home_team_name, away_team_id, away_team_name. Source: API-Football. Freshness: Real-time.</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>bet-bot Data Dictionary</title>
+        <section>Section 2: Team Form Data</section>
+        <snippet>last_5_results, last_10_results (array[W/D/L]), win_percentage_5, goals_for_avg_5, goals_against_avg_5, home/away splits. Source: API-Football + ESPN. Freshness: < 24h.</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>bet-bot Data Dictionary</title>
+        <section>Section 3: Injury & Suspension Data</section>
+        <snippet>player_name, player_position, injury_status (Doubt/Injured/Suspended/Out), expected_return, impact_severity (Key/Moderate/Minor), missing_key_players_count. Source: API-Football. Freshness: < 12h.</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>bet-bot Data Dictionary</title>
+        <section>Section 5: Odds Data</section>
+        <snippet>bookmaker_name, odds_updated_at, match_result (home_win/draw/away_win), total_goals (over/under 2.5, 3.5), corners, cards markets. Source: API-Football / Odds-API. Freshness: < 1h. Odds Freshness Rule: If odds_age_minutes > 60, mark as STALE and reject.</snippet>
+      </doc>
+      <doc>
+        <path>docs/development-stories.md</path>
+        <title>bet-bot Development Stories</title>
+        <section>Story 2.2: Integrate API-Football SDK</section>
+        <snippet>Set up API-Football client with proper authentication. Implement fetch_fixtures, fetch_team_form, fetch_injuries, fetch_odds functions. Add retry logic (3 attempts, exponential backoff). Handle rate limiting gracefully. Log all API calls (URL, response status, timestamp). Responses must map to Pydantic models.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project-Specific Claude Code Rules</title>
+        <section>PYTHON API CLIENT IMPLEMENTATION - HTTP Client Architecture</section>
+        <snippet>ALWAYS use httpx for sync/async compatibility. ALWAYS use a single global client instance with connection pooling. NEVER instantiate multiple client instances in hot loops. Standard Pattern: Global _http_client singleton with httpx.AsyncClient configuration (timeout=30s, connection pooling, HTTP/2 enabled).</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project-Specific Claude Code Rules</title>
+        <section>PYTHON API CLIENT IMPLEMENTATION - Retry Logic</section>
+        <snippet>ALWAYS use tenacity library for retry logic. ALWAYS use exponential backoff with jitter. ALWAYS retry ONLY transient errors (5xx, timeouts, connection errors). NEVER retry 4xx errors (except 429 rate limit). Standard Retry Config: 5 attempts max, wait_exponential (2s, 4s, 8s, 16s, 32s max). Must respect Retry-After headers.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project-Specific Claude Code Rules</title>
+        <section>PYTHON API CLIENT IMPLEMENTATION - Error Handling</section>
+        <snippet>ALWAYS define custom exception hierarchy. Custom exceptions: BetBotError (base) → APIError → APIRateLimitError, APIAuthenticationError, APINotFoundError, APIServerError, DataValidationError, DataStaleError. ALWAYS include context in exceptions (url, status, response body). NEVER swallow exceptions silently.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project-Specific Claude Code Rules</title>
+        <section>PYTHON API CLIENT IMPLEMENTATION - Response Validation</section>
+        <snippet>ALWAYS validate response structure before processing. ALWAYS use Pydantic models for response parsing. ALWAYS handle missing fields gracefully. Standard Pattern: Use Field aliases for nested API responses (e.g., fixture_id = Field(..., alias="fixture.id")). Validate JSON deserialization with safe_json_parse.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/2-1-create-pydantic-models-for-data-structures.md</path>
+        <title>Story 2.1: Create Pydantic Models for Data Structures</title>
+        <section>Dev Notes - Key Implementation Notes</section>
+        <snippet>All models use Pydantic v2 with BaseModel and ConfigDict. Field aliases enabled for API-Football response mapping. Models include: Fixture (fixture_id aliased as "fixture.id"), Team, League, TeamForm, Injury, InjuredPlayer, Odds, Market. Team and League objects must be manually constructed from nested API structures.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>model</kind>
+        <symbol>Fixture, Team, League</symbol>
+        <lines>1-289</lines>
+        <reason>Pydantic models for fixture data that API-Football responses will be mapped to. Includes Field aliases for nested API structures.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/form.py</path>
+        <kind>model</kind>
+        <symbol>TeamForm, RecentResult</symbol>
+        <lines>1-224</lines>
+        <reason>Pydantic models for team form data with 5/10 game windows, win percentages, home/away splits. Target for fetch_team_form() function.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/injuries.py</path>
+        <kind>model</kind>
+        <symbol>Injury, InjuredPlayer</symbol>
+        <lines>1-195</lines>
+        <reason>Pydantic models for injury data with player availability, impact severity, key player counts. Target for fetch_injuries() function.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/odds.py</path>
+        <kind>model</kind>
+        <symbol>Odds, Market</symbol>
+        <lines>1-149</lines>
+        <reason>Pydantic models for bookmaker odds with timestamp for freshness validation. Target for fetch_odds() function.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/config/settings.py</path>
+        <kind>module</kind>
+        <symbol>Config, config singleton</symbol>
+        <lines>1-231</lines>
+        <reason>Configuration management with API key validation. Provides config.api_football_key for authentication. Includes get_masked_key() for safe logging.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/utils/logging.py</path>
+        <kind>module</kind>
+        <symbol>logger, setup_logging</symbol>
+        <lines>1-</lines>
+        <reason>Structured logging infrastructure for API call tracking and error logging with context.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/__init__.py</path>
+        <kind>module</kind>
+        <symbol></symbol>
+        <lines></lines>
+        <reason>Data package initialization. Will need to export new api_football fetcher module.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package>httpx</package>
+        <version>>=0.24.0</version>
+        <usage>Async HTTP client for API calls with connection pooling, timeout handling, HTTP/2 support</usage>
+      </python>
+      <python>
+        <package>tenacity</package>
+        <version>>=8.2.0</version>
+        <usage>Retry logic library for exponential backoff, stop_after_attempt, retry_if_exception_type decorators</usage>
+      </python>
+      <python>
+        <package>pydantic</package>
+        <version>>=2.0.0</version>
+        <usage>Data validation and parsing for API responses. Models already defined in bet_bot.models</usage>
+      </python>
+      <python>
+        <package>python-dotenv</package>
+        <version>>=1.0.0</version>
+        <usage>Environment variable management for API keys</usage>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- MANDATORY: Use httpx.AsyncClient singleton pattern with global _http_client instance (NEVER create multiple clients)
+- MANDATORY: Use tenacity library for retry logic with exponential backoff (2s, 4s, 8s, 16s, 32s max, 5 attempts)
+- MANDATORY: Only retry transient errors (5xx, timeouts, connection errors). NEVER retry 4xx except 429 rate limit
+- MANDATORY: Respect Retry-After headers from 429 responses (both seconds and HTTP date format)
+- MANDATORY: Implement client-side rate limiter using token bucket algorithm (100 requests/60s for API-Football)
+- MANDATORY: Define custom exception hierarchy (must create exceptions.py if not exists): BetBotError → APIError → specific error types
+- MANDATORY: All API responses MUST be validated with Pydantic models before returning
+- MANDATORY: Use Field aliases for nested API-Football structures (e.g., fixture.id, teams.home.name)
+- MANDATORY: Team and League objects must be manually constructed from nested API response data (not auto-mapped)
+- MANDATORY: Log all API calls with URL, status code, timestamp, and errors with full context
+- MANDATORY: Never log API keys (use config.get_masked_key() for safe logging)
+- MANDATORY: Return None for graceful degradation on 404, timeouts, network errors (NOT raise exception)
+- MANDATORY: Raise APIAuthenticationError for 401/403, APIRateLimitError for 429, APIServerError for 5xx
+- MANDATORY: Connection pooling: 100 max connections, 20 keepalive connections
+- MANDATORY: Timeout configuration: 30s total timeout, 10s connect timeout
+- MANDATORY: Enable HTTP/2 for better multiplexing performance
+- MANDATORY: All async functions must use proper error handling with try/except/finally
+- CODE STYLE: Follow existing Pydantic v2 patterns (ConfigDict, not deprecated Config class)
+- CODE STYLE: Use type hints for all function parameters and return types
+- CODE STYLE: Max line length 100 characters (configured in ruff)
+- CODE STYLE: Include comprehensive docstrings for all public functions
+- TESTING: Minimum 90% code coverage for new api_football.py module
+- TESTING: Mock httpx responses, test all error scenarios, validate Field alias mapping
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>API-Football Fixtures Endpoint</name>
+      <kind>REST endpoint</kind>
+      <signature>GET https://api-football-v3.p.rapidapi.com/v3/fixtures?date={date}&league={league_id}</signature>
+      <path>docs/technical-spec.md:257-260</path>
+    </interface>
+    <interface>
+      <name>API-Football Team Statistics Endpoint</name>
+      <kind>REST endpoint</kind>
+      <signature>GET https://api-football-v3.p.rapidapi.com/v3/teams/statistics?team={team_id}&season={season}&league={league_id}</signature>
+      <path>docs/technical-spec.md:258</path>
+    </interface>
+    <interface>
+      <name>API-Football Injuries Endpoint</name>
+      <kind>REST endpoint</kind>
+      <signature>GET https://api-football-v3.p.rapidapi.com/v3/injuries?team={team_id}</signature>
+      <path>docs/technical-spec.md:260</path>
+    </interface>
+    <interface>
+      <name>API-Football Odds Endpoint</name>
+      <kind>REST endpoint</kind>
+      <signature>GET https://api-football-v3.p.rapidapi.com/v3/odds?fixture={fixture_id}</signature>
+      <path>docs/technical-spec.md:260</path>
+    </interface>
+    <interface>
+      <name>Config.api_football_key</name>
+      <kind>configuration property</kind>
+      <signature>config.api_football_key: str</signature>
+      <path>src/bet_bot/config/settings.py:66-72</path>
+    </interface>
+    <interface>
+      <name>Fixture Model</name>
+      <kind>Pydantic BaseModel</kind>
+      <signature>class Fixture(BaseModel): fixture_id, kickoff_time, home_team, away_team, league, odds, etc.</signature>
+      <path>src/bet_bot/models/fixtures.py:172-289</path>
+    </interface>
+    <interface>
+      <name>TeamForm Model</name>
+      <kind>Pydantic BaseModel</kind>
+      <signature>class TeamForm(BaseModel): team_id, last_5_results, last_10_results, win_percentage_5, goals_for_avg_5, etc.</signature>
+      <path>src/bet_bot/models/form.py:105-224</path>
+    </interface>
+    <interface>
+      <name>Injury Model</name>
+      <kind>Pydantic BaseModel</kind>
+      <signature>class Injury(BaseModel): team_id, injured_players: list[InjuredPlayer], missing_key_players_count, etc.</signature>
+      <path>src/bet_bot/models/injuries.py:138-195</path>
+    </interface>
+    <interface>
+      <name>Odds Model</name>
+      <kind>Pydantic BaseModel</kind>
+      <signature>class Odds(BaseModel): fixture_id, bookmaker, markets: list[Market], odds_updated_at, etc.</signature>
+      <path>src/bet_bot/models/odds.py:89-149</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+This project uses pytest with pytest-asyncio for async test support and pytest-cov for coverage reporting. All tests are located in /tests/ directory. Test structure follows pattern: /tests/unit/test_{module_name}.py for unit tests, /tests/integration/test_{feature}.py for integration tests. Minimum 80% code coverage target project-wide, 90%+ for critical modules like API clients. Tests must mock external API calls using httpx.MockTransport or similar. All Pydantic model validation must be tested with both valid and invalid inputs.
+    </standards>
+    <locations>
+- /tests/unit/test_api_football.py (to be created)
+- /tests/unit/test_models.py (exists from Story 2.1 - reference for test patterns)
+    </locations>
+    <ideas>
+- Test fetch_fixtures() with valid API-Football response JSON (mock 200 response with fixtures array)
+- Test fetch_fixtures() returns empty list for 404 response (no fixtures today)
+- Test fetch_fixtures() returns None for timeout/network error (graceful degradation)
+- Test fetch_team_form() maps nested statistics response to TeamForm model correctly
+- Test fetch_team_form() handles missing form data (returns TeamForm with zeros/empty arrays)
+- Test fetch_injuries() calculates missing_key_players_count based on impact_severity correctly
+- Test fetch_injuries() returns Injury with empty lists when no injuries exist
+- Test fetch_odds() transforms outcomes array to dict[str, float] mapping per market
+- Test fetch_odds() handles missing markets gracefully (skips market, doesn't fail entire response)
+- Test retry logic: verify exponential backoff delays (2s, 4s, 8s, 16s, 32s)
+- Test retry logic: verify max 5 attempts before giving up
+- Test retry logic: verify 4xx errors NOT retried (except 429)
+- Test retry logic: verify 5xx errors ARE retried
+- Test rate limiter: verify token bucket blocks request when 100+ requests in 60s window
+- Test rate limiter: verify requests allowed after time window expires
+- Test Retry-After header: verify both seconds format and HTTP date format parsing
+- Test Retry-After header: verify correct wait time calculated and sleep called
+- Test error handling: verify APIAuthenticationError raised for 401 response
+- Test error handling: verify APIAuthenticationError raised for 403 response
+- Test error handling: verify None returned with warning log for 404
+- Test error handling: verify APIRateLimitError raised for 429 response
+- Test error handling: verify APIServerError raised for 500, 502, 503 responses
+- Test error handling: verify None returned for httpx.TimeoutException
+- Test error handling: verify None returned for httpx.NetworkError
+- Test Field alias mapping: verify Fixture.fixture_id correctly populated from response["fixture"]["id"]
+- Test Field alias mapping: verify Fixture.kickoff_time correctly populated from response["fixture"]["date"]
+- Test manual Team construction: verify Team object created from nested response["teams"]["home"] structure
+- Test manual League construction: verify League object created from nested response["league"] structure
+- Test global httpx client: verify singleton pattern (same instance returned on multiple calls)
+- Test global httpx client: verify configuration (timeout=30s, limits, HTTP/2 enabled)
+- Test API headers: verify x-rapidapi-key header set correctly
+- Test API headers: verify x-rapidapi-host header set correctly
+- Test logging: verify API call logged with URL, status, timestamp
+- Test logging: verify errors logged with context (URL, status, response body snippet)
+- Test logging: verify API key NEVER logged (even partially)
+    </ideas>
+  </tests>
+</story-context>

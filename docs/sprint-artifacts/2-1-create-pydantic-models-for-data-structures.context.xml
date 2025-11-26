@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>1</storyId>
+    <title>Create Pydantic Models for Data Structures</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/2-1-create-pydantic-models-for-data-structures.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>define all data models used throughout the application</iWant>
+    <soThat>I have type safety and validation for all data</soThat>
+    <tasks>
+      - Create models directory structure (AC: #1-5)
+        - Create `/src/bet_bot/models/` directory
+        - Create `/src/bet_bot/models/__init__.py` and export all models
+        - Verify directory exists and is importable
+      - Implement fixtures.py models (AC: #1, #6, #7, #8)
+        - Create `League` model (league_id, league_name, league_country, league_season)
+        - Create `Team` model (id, name, form data, goals, injury list reference)
+        - Create `Fixture` model (fixture_id, kickoff_time, home_team, away_team, league, odds dict, h2h history list)
+        - Add validators: ID fields non-empty, fixture_date must be valid ISO 8601, teams must be different
+        - Add docstrings to all classes and fields
+        - Add example values to model Config class
+      - Implement form.py models (AC: #2, #6, #7, #8)
+        - Create `RecentResult` model (result: W/D/L, opponent, goals_for, goals_against, date)
+        - Create `TeamForm` model (team_id, team_name, last_5_results, last_10_results, win percentages, goals avg home/away)
+        - Add validators: Results must be W/D/L, win percentages 0.0-1.0, goals >= 0
+        - Add docstrings explaining form tracking purpose
+        - Add example values
+      - Implement injuries.py models (AC: #3, #6, #7, #8)
+        - Create `InjuredPlayer` model (player_id, player_name, position, injury_status, impact_severity)
+        - Create `Injury` model (team_id, injured_players list, missing_key_players_count, missing_key_players_list)
+        - Add validators: Status must be one of Doubt/Injured/Suspended/Out, impact one of Key/Moderate/Minor
+        - Add docstrings explaining injury impact on analysis
+        - Add example values
+      - Implement odds.py models (AC: #4, #6, #7, #8)
+        - Create `Market` model (market_type, odds dict mapping {outcome: float odds})
+        - Create `Odds` model (fixture_id, bookmaker_name, odds_updated_at, markets list)
+        - Add validators: Odds >= 1.0, market_type non-empty, timestamp valid ISO 8601
+        - Add docstrings explaining market types (match_result, total_goals, corners, cards)
+        - Add example values with realistic odds
+      - Implement analysis.py models (AC: #5, #6, #7, #8)
+        - Create `MarketAnalysis` model (market_type, ai_probability: 0.0-1.0, reasoning: str, confidence: 0-100)
+        - Create `AIAnalysis` model (fixture_id, markets list, analysis_timestamp)
+        - Create `Pick` model (fixture_id, market, ai_probability, implied_probability, ev_percentage, confidence, recommended_stake, suggested_odds)
+        - Add validators: Probabilities 0.0-1.0, confidence 0-100, EV can be negative, odds >= 1.0
+        - Add docstrings explaining AI analysis flow
+        - Add example values with realistic analysis data
+      - Export all models from __init__.py (AC: #9)
+        - Update `/src/bet_bot/models/__init__.py` to import and re-export all models
+        - Test: `from bet_bot.models import Fixture, Team, League, ...` works
+        - Verify no circular imports
+      - Create comprehensive unit tests (AC: #9, #10)
+        - Create `/tests/unit/test_models.py`
+        - Test valid instances can be created for each model
+        - Test invalid data raises ValidationError (empty IDs, invalid enums, out-of-range values)
+        - Test model serialization to JSON and deserialization from JSON
+        - Test Field alias support for API response mapping
+        - Target 95%+ code coverage on models module
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Create `/src/bet_bot/models/fixtures.py` with `Fixture`, `Team`, `League` models
+    2. Create `/src/bet_bot/models/form.py` with `TeamForm`, `RecentResult` models
+    3. Create `/src/bet_bot/models/injuries.py` with `InjuredPlayer`, `Injury` models
+    4. Create `/src/bet_bot/models/odds.py` with `Odds`, `Market` models
+    5. Create `/src/bet_bot/models/analysis.py` with `AIAnalysis`, `MarketAnalysis`, `Pick` models
+    6. All models use Pydantic with proper validation
+    7. Models include docstrings explaining fields
+    8. Add example values to each model
+    9. All models can be imported without error
+    10. Can create instances with valid data and invalid data raises validation errors
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Data Schema (lines 304-347)</section>
+        <snippet>Defines core Pydantic models: Team, Fixture, AIAnalysis, MarketAnalysis, Pick with field signatures and types. Includes examples of model structure with modern Python 3.10+ type hints (list[str], dict[str, float]).</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary</title>
+        <section>Complete field definitions across all 10 sections</section>
+        <snippet>Comprehensive specification for every field: Fixture Data (lines 21-40), Team Form (43-70), Injuries (73-95), Head-to-Head (98-119), Odds (122-160), AI Analysis (163-192), Edge Detection (195-218), Confidence Scoring (221-252), Stake Sizing (256-274), Final Pick Output (277-295). Includes validation rules, freshness requirements, and example values.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/1-4-set-up-configuration-management.md</path>
+        <title>Configuration Management (Story 1.4)</title>
+        <section>Pydantic Pattern Implementation</section>
+        <snippet>Demonstrates established Pydantic pattern in this project: BaseModel subclass with Field() descriptors, @validator decorators with clear error messages, Config class with allow_population_by_field_name = True for flexibility, docstrings on classes and fields.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/1-5-implement-structured-logging.md</path>
+        <title>Structured Logging (Story 1.5)</title>
+        <section>Module Structure and Testing Standards</section>
+        <snippet>Establishes project patterns: module exports in __init__.py for easy imports, comprehensive docstrings on all classes/functions, pytest with comprehensive test cases (25 unit tests in logging), target 95%+ code coverage on critical modules.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/bet_bot/config/settings.py</path>
+        <kind>reference-implementation</kind>
+        <symbol>Config</symbol>
+        <lines>31-50+</lines>
+        <reason>Pydantic BaseModel reference showing established patterns in project: Field() with descriptions, @field_validator decorators, ConfigDict, model_config, docstrings on class and method. Use as template for consistency.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/utils/logging.py</path>
+        <kind>reference-implementation</kind>
+        <symbol>LoggerConfig</symbol>
+        <lines>1-100</lines>
+        <reason>Demonstrates module structure, comprehensive docstrings, and validation patterns already in use. Models should follow similar documentation style.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/unit/test_config.py</path>
+        <kind>test-reference</kind>
+        <symbol>test_config_validation</symbol>
+        <lines>1-50</lines>
+        <reason>Existing unit test structure showing pytest patterns, validation testing approach, and coverage expectations for this project.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot</path>
+        <kind>directory</kind>
+        <symbol>package-root</symbol>
+        <reason>Root package directory. Models will be created as `/src/bet_bot/models/` alongside existing `/data`, `/analysis`, `/display`, `/cli`, `/config`, `/utils` directories.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python-core>
+        <package name="pydantic" version=">=2.0.0">
+          <reason>Required for all model definitions (BaseModel, Field, field_validator, ConfigDict)</reason>
+        </package>
+        <package name="python" version=">=3.10">
+          <reason>Target Python version supporting modern type hints (list[str], dict[str, float], Optional[T] without import)</reason>
+        </package>
+      </python-core>
+      <python-testing>
+        <package name="pytest" version=">=7.0.0">
+          <reason>Unit testing framework for comprehensive model validation tests</reason>
+        </package>
+        <package name="pytest-asyncio" version=">=0.21.0">
+          <reason>May be needed if models include async validators or async initialization</reason>
+        </package>
+        <package name="pytest-cov" version=">=4.0.0">
+          <reason>Coverage tracking to verify 95%+ code coverage on models module</reason>
+        </package>
+      </python-testing>
+      <python-dev>
+        <package name="mypy" version=">=1.0.0">
+          <reason>Type checking - models must pass strict mypy validation (pyproject.toml: strict = true)</reason>
+        </package>
+        <package name="ruff" version=">=0.1.0">
+          <reason>Linting and import sorting - models must pass ruff checks</reason>
+        </package>
+      </python-dev>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <type>pattern</type>
+      <title>Pydantic Version and Pattern</title>
+      <description>Project uses Pydantic v2.0+ (from pyproject.toml). Must use BaseModel, Field(), field_validator decorators (v2 syntax). Do NOT use @validator from pydantic.v1. Config must be ConfigDict (not Config class with Meta).</description>
+      <source>pyproject.toml: pydantic>=2.0.0</source>
+    </constraint>
+    <constraint>
+      <type>pattern</type>
+      <title>Python Type Hints (MANDATORY)</title>
+      <description>Use modern Python 3.10+ type hints: list[str], dict[str, float], Optional[T] (not List, Dict from typing). All fields must have type hints. Use datetime (not str) for ISO 8601 timestamps.</description>
+      <source>CLAUDE.md - Python API Client Implementation - Response Validation</source>
+    </constraint>
+    <constraint>
+      <type>pattern</type>
+      <title>Field Definitions with Field()</title>
+      <description>Use Field(..., description="...") for all field documentation. Use Field(alias="api_field") for API response mapping (e.g., fixture_id = Field(..., alias="fixture.id")). Use allow_population_by_field_name = True in Config to allow both field name and alias.</description>
+      <source>CLAUDE.md - Pydantic Field Definitions, data-dictionary.md fixture data mapping</source>
+    </constraint>
+    <constraint>
+      <type>pattern</type>
+      <title>Validators for Data Quality</title>
+      <description>Use @field_validator decorators for validation. Validate: non-empty IDs, 0.0-1.0 probabilities, odds >= 1.0, enum values (W/D/L, position types, injury statuses), date formats (ISO 8601). Raise ValueError with clear messages.</description>
+      <source>CLAUDE.md, data-dictionary.md Validation Rules sections</source>
+    </constraint>
+    <constraint>
+      <type>pattern</type>
+      <title>Config Pattern (ConfigDict)</title>
+      <description>Use model_config = ConfigDict(allow_population_by_field_name=True, extra="ignore", use_enum_values=True). This pattern established in Story 1.4 (config/settings.py).</description>
+      <source>Story 1.4 implementation, CLAUDE.md response validation pattern</source>
+    </constraint>
+    <constraint>
+      <type>naming</type>
+      <title>Module and File Naming</title>
+      <description>Create 5 model files in /src/bet_bot/models/: fixtures.py, form.py, injuries.py, odds.py, analysis.py. Export from __init__.py. Use snake_case for filenames, PascalCase for class names.</description>
+      <source>Story acceptance criteria, project structure from story 2.1</source>
+    </constraint>
+    <constraint>
+      <type>pattern</type>
+      <title>Type Safety - Strict mypy</title>
+      <description>All code must pass mypy strict mode (pyproject.toml: strict = true). All functions must have return type annotations. No Any types without explicit discussion with team.</description>
+      <source>pyproject.toml [tool.mypy] strict = true</source>
+    </constraint>
+    <constraint>
+      <type>pattern</type>
+      <title>Linting Requirements</title>
+      <description>Code must pass ruff checks: E, W, F, I (isort), N, UP, B, C4, SIM. Max line length 100 chars. F401 ignored in __init__.py (unused imports allowed for re-exports).</description>
+      <source>pyproject.toml [tool.ruff]</source>
+    </constraint>
+    <constraint>
+      <type>documentation</type>
+      <title>Docstrings Required</title>
+      <description>All classes and fields must have docstrings. Use Google-style docstrings. Include purpose, field descriptions, validation constraints, and example values.</description>
+      <source>Story AC #7, Story 1.5 module structure patterns</source>
+    </constraint>
+    <constraint>
+      <type>pattern</type>
+      <title>Data Freshness Awareness</title>
+      <description>Models should be aware of data freshness requirements (from data-dictionary): Odds &lt; 1h, Injuries &lt; 12h, Form &lt; 24h. Include timestamp fields. Validators may check freshness or just include timestamp for downstream validation.</description>
+      <source>data-dictionary.md sections 5 (Odds), 3 (Injuries), 2 (Form)</source>
+    </constraint>
+    <constraint>
+      <type>pattern</type>
+      <title>Field Aliases for API Mapping</title>
+      <description>API-Football returns nested JSON (fixture.id, teams.home.id, league.name). Use Field(alias="fixture.id") to map API response fields. With allow_population_by_field_name=True, can instantiate from both field name and alias.</description>
+      <source>technical-spec.md API integration, data-dictionary.md fixture data</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Fixture Model</name>
+      <kind>pydantic-model</kind>
+      <signature>class Fixture(BaseModel): fixture_id: str; kickoff_time: datetime; home_team: Team; away_team: Team; league: League; odds: dict[str, dict[str, float]]; head_to_head_history: list[PastResult]</signature>
+      <path>src/bet_bot/models/fixtures.py</path>
+      <purpose>Core data structure for a single football match fixture. Used throughout pipeline for data normalization, OpenAI analysis input, and pick output.</purpose>
+    </interface>
+    <interface>
+      <name>Team Model</name>
+      <kind>pydantic-model</kind>
+      <signature>class Team(BaseModel): id: str; name: str; form_5_games: list[str]; avg_goals_for: float; avg_goals_against: float; injuries: list[InjuredPlayer]</signature>
+      <path>src/bet_bot/models/fixtures.py</path>
+      <purpose>Represents a football team with form data and injuries. Nested in Fixture model.</purpose>
+    </interface>
+    <interface>
+      <name>League Model</name>
+      <kind>pydantic-model</kind>
+      <signature>class League(BaseModel): league_id: str; league_name: str; league_country: str; league_season: int</signature>
+      <path>src/bet_bot/models/fixtures.py</path>
+      <purpose>League context for fixtures. Nested in Fixture model.</purpose>
+    </interface>
+    <interface>
+      <name>AIAnalysis Model</name>
+      <kind>pydantic-model</kind>
+      <signature>class AIAnalysis(BaseModel): fixture_id: str; markets: list[MarketAnalysis]; analysis_timestamp: datetime</signature>
+      <path>src/bet_bot/models/analysis.py</path>
+      <purpose>Output from OpenAI analysis. Contains probability estimates for each market (match result, total goals, corners, cards).</purpose>
+    </interface>
+    <interface>
+      <name>Pick Model</name>
+      <kind>pydantic-model</kind>
+      <signature>class Pick(BaseModel): fixture_id: str; market: str; ai_probability: float; implied_probability: float; ev_percentage: float; confidence: float; recommended_stake: float; suggested_odds: float</signature>
+      <path>src/bet_bot/models/analysis.py</path>
+      <purpose>Final output shown to user. Represents a single betting recommendation with EV, confidence, and stake sizing.</purpose>
+    </interface>
+    <interface>
+      <name>Models Import Export</name>
+      <kind>python-module-interface</kind>
+      <signature>from bet_bot.models import Fixture, Team, League, TeamForm, RecentResult, InjuredPlayer, Injury, Odds, Market, AIAnalysis, MarketAnalysis, Pick</signature>
+      <path>src/bet_bot/models/__init__.py</path>
+      <purpose>Central export point for all models. Enables clean imports throughout application.</purpose>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest as testing framework. Test both valid instance creation and validation error handling. Models must reject invalid data (empty IDs, out-of-range values, wrong enum values). All models must be serializable to JSON and deserializable back. Test Field aliases work correctly for API response mapping. Target 95%+ code coverage on models module. Follow patterns established in Story 1.5: comprehensive test cases with clear test names, test both success and failure paths, edge cases (empty values, None, boundary conditions).
+    </standards>
+    <locations>
+      /tests/unit/test_models.py - All model validation tests
+      /tests/integration/ - Integration tests for model usage (after model implementation)
+      /tests/ - Shared fixtures and conftest.py
+    </locations>
+    <ideas>
+      - AC #9 (import without error): Test each model can be imported individually and from __init__.py
+      - AC #10 (valid/invalid data): Test valid instances created successfully; test invalid data raises ValidationError with clear messages
+      - Field aliases: Test API-Football nested JSON can be parsed via aliases (fixture.id, teams.home.id, league.name)
+      - Serialization: Test model_dump(), model_dump_json(), and parse_obj() for round-trip serialization
+      - Enum fields: If using Enum for status/result fields, test enum values and string coercion
+      - Required vs optional: Test which fields are required vs optional (with defaults)
+      - Boundary values: Test probability fields (0.0-1.0), odds (>= 1.0), timestamps (valid ISO 8601)
+      - Empty collections: Test how models handle empty lists (injured_players=[], markets=[])
+      - Nested models: Test nested Team in Fixture, nested MarketAnalysis in AIAnalysis
+      - Validation error messages: Ensure @field_validator raises ValueError with descriptive messages (not generic)
+      - Coverage: Aim for 95%+ by testing all code paths in validators and model initialization
+    </ideas>
+  </tests>
+</story-context>
