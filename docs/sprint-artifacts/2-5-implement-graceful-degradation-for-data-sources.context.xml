@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="bet-bot/2-5-graceful-degradation" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>5</storyId>
+    <title>Implement Graceful Degradation for Data Sources</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-26</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/2-5-implement-graceful-degradation-for-data-sources.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>As a developer</asA>
+    <iWant>to automatically fall back to backup sources if any primary API fails</iWant>
+    <soThat>the system continues operating even when one data source becomes unavailable</soThat>
+    <tasks>
+      - Task 1: Review existing fetcher functions
+      - Task 2: Implement fetch_all_data() orchestration function
+      - Task 3: Implement fixtures fetching with error handling
+      - Task 4: Implement form data fetching with fallback
+      - Task 5: Implement injuries fetching
+      - Task 6: Implement odds fetching
+      - Task 7: Implement head-to-head data fetching
+      - Task 8: Implement source tracking and logging
+      - Task 9: Implement concurrency and performance
+      - Task 10: Handle integration with existing code
+      - Task 11: Write unit tests
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Create `/src/bet_bot/data/fetchers/__init__.py` with `fetch_all_data()` function
+    2. Implement primary-source fetching with fallback logic:
+       - Try API-Football first for fixtures, form, injuries, odds
+       - On timeout/network error → try ESPN scraper (for form data only)
+       - On all failures → log warning and continue with missing data
+    3. Never crash entire pipeline because one source fails
+    4. Track and log which sources succeeded/failed for transparency
+    5. Confidence scoring layer will later penalize missing data (Story 5.3)
+    6. All error handling follows CLAUDE.md patterns: custom exceptions, structured logging
+    7. Return consolidated data structure with source tracking metadata
+    8. Handle edge case: if API-Football returns empty list but no error → treat as "no matches"
+    9. Handle edge case: ESPN scraper available only for form data (injuries/odds have no backup)
+    10. Return `Optional[dict]` with keys: `fixtures`, `form_data`, `injuries`, `odds`, `h2h`; None on critical failure
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification - System Architecture</title>
+        <section>Data Fetching Layer (lines 84-112)</section>
+        <snippet>Key Pattern: async def fetch_all_data() → ConsolidatedFixtures. Error Handling: If API-Football fails → use scrape backup. If scrape fails → continue with missing data (graceful degradation). Log all failures for debugging.</snippet>
+      </doc>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification - Error Handling Strategy</title>
+        <section>Error Handling Strategy (lines 351-387)</section>
+        <snippet>API Failures pattern: try fetch → except APIError log and use backup → except ScraperError log error. Data Quality Issues: check data age and log with confidence impact. OpenAI Failures: use graceful degradation on errors.</snippet>
+      </doc>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification - Performance & Scaling</title>
+        <section>Batch Processing Strategy (lines 393-409)</section>
+        <snippet>Parallel fetching using asyncio.gather() for data sources. Sequential OpenAI analysis. Total runtime target: &lt; 2 minutes for typical day (20-30 fixtures). Async I/O prevents blocking on network calls.</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary - Freshness Requirements</title>
+        <section>Data Quality Validation Rules (lines 298-320)</section>
+        <snippet>Critical Validations: Fixture date today, valid ISO 8601, teams different, odds exist and positive. Degradation Validations: Form &lt; 24h (if older, -5 confidence), Injury &lt; 12h, Odds &lt; 1h. Recovery Rules: If API fails → use ESPN, if ESPN fails → continue without form.</snippet>
+      </doc>
+      <doc>
+        <path>docs/development-stories.md</path>
+        <title>Development Stories - Story 2.5 Requirements</title>
+        <section>Story 2.5: Graceful Degradation (lines 210-228)</section>
+        <snippet>Create fetch_all_data() function. Try API-Football first for each data type. On failure, try ESPN scraper (for form data). On all failures, log warning and continue with missing data. Never crash pipeline. Track which sources succeeded/failed in output.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>src/bet_bot/data/fetchers/__init__.py</path>
+        <kind>module-init</kind>
+        <symbol>fetch_team_form_with_fallback</symbol>
+        <lines>28-102</lines>
+        <reason>Existing fallback pattern implementation - shows how API-Football primary with ESPN backup is structured. This is the pattern to replicate for fetch_all_data(). Demonstrates: try primary, fallback to secondary, log which source, return None on all failures.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/fetchers/api_football.py</path>
+        <kind>module</kind>
+        <symbol>fetch_fixtures, fetch_team_form, fetch_injuries, fetch_odds</symbol>
+        <lines>150+</lines>
+        <reason>Primary fetcher functions that fetch_all_data() will orchestrate. Must understand their signatures, return types (Optional[Model]), error behavior (raise exceptions vs return None). Already implement retry logic and rate limiting.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/fetchers/espn_scraper.py</path>
+        <kind>module</kind>
+        <symbol>fetch_team_form_espn</symbol>
+        <lines>all</lines>
+        <reason>ESPN scraper implementation - the fallback source for form data. Demonstrates: separate rate limiter, error handling pattern, returns Optional[TeamForm]. Used as backup in fetch_all_data() if API-Football form fails.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models.py</path>
+        <kind>models</kind>
+        <symbol>Fixture, TeamForm, Injury, Odds</symbol>
+        <reason>Pydantic models that fetchers return. fetch_all_data() returns dict with keys mapping to lists/dicts of these models. Must understand model structure for proper typing and validation.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>exceptions</kind>
+        <symbol>APIAuthenticationError, APIError, APIRateLimitError, APIServerError</symbol>
+        <reason>Custom exception hierarchy used by fetchers. fetch_all_data() must catch APIAuthenticationError to HALT, catch other API errors to continue gracefully. Demonstrates CLAUDE.md error handling pattern.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <ecosystem name="python">
+        <package>
+          <name>httpx</name>
+          <version>>=0.24.0</version>
+          <reason>Async HTTP client used by all fetchers. Global singleton in api_football.py. fetch_all_data() reuses existing client.</reason>
+        </package>
+        <package>
+          <name>asyncio</name>
+          <version>builtin</version>
+          <reason>Native Python async/await runtime. fetch_all_data() uses asyncio.gather() for parallel fetches and asyncio.Semaphore for rate limiting.</reason>
+        </package>
+        <package>
+          <name>tenacity</name>
+          <version>>=8.2.0</version>
+          <reason>Retry decorator library used by all individual fetchers. Implements exponential backoff with jitter. fetch_all_data() orchestrates fetchers that already use tenacity.</reason>
+        </package>
+        <package>
+          <name>pydantic</name>
+          <version>>=2.0.0</version>
+          <reason>Data validation library. Fetchers return Pydantic models (Fixture, TeamForm, etc). fetch_all_data() validates models and may catch ValidationError.</reason>
+        </package>
+        <package>
+          <name>logging</name>
+          <version>builtin</version>
+          <reason>Structured logging throughout. fetch_all_data() logs: which sources tried, which succeeded, which failed, counts of data retrieved, source metadata.</reason>
+        </package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <name>Return Type</name>
+      <description>fetch_all_data() must return Optional[dict] with keys: fixtures, form_data, injuries, odds, h2h. Missing data represented as [] (empty list) or None. Return None only on critical failures (auth errors).</description>
+      <source>Story AC #10, CLAUDE.md patterns</source>
+    </constraint>
+    <constraint>
+      <name>Error Handling</name>
+      <description>MANDATORY CLAUDE.md patterns: Custom exceptions for specific error types. APIAuthenticationError → HALT (can't continue). APIServerError, APIRateLimitError → logged and retried by decorator. Timeouts/network errors → log warning, return None/empty. Never raise to caller unless critical.</description>
+      <source>CLAUDE.md - Error Handling section, Story AC #6</source>
+    </constraint>
+    <constraint>
+      <name>Async Patterns</name>
+      <description>Use asyncio.gather(*tasks, return_exceptions=True) for parallel fetches. Use asyncio.Semaphore for concurrency limits (max 5 for ESPN scraper, already enforced per-API by rate limiters). Proper async context managers for cleanup.</description>
+      <source>CLAUDE.md - Async/Await Patterns, technical-spec.md</source>
+    </constraint>
+    <constraint>
+      <name>Logging</name>
+      <description>Structured logging with context: fixture_id, team_id, url, source (API-Football vs ESPN), success/failure reason, counts. Log at: INFO (successful fetch), WARNING (fallback used), CRITICAL (auth failure, halt). Follow CLAUDE.md logging patterns.</description>
+      <source>CLAUDE.md - Logging Configuration, Story AC #4</source>
+    </constraint>
+    <constraint>
+      <name>Rate Limiting</name>
+      <description>Do NOT add global rate limiter - individual fetchers already enforce per-API limits. ESPN scraper needs Semaphore (max 5 concurrent) to prevent aggressive scraping. Respect Retry-After headers on 429 responses.</description>
+      <source>CLAUDE.md - Rate Limiting, existing fetcher implementations</source>
+    </constraint>
+    <constraint>
+      <name>No Breaking Changes</name>
+      <description>Update /src/bet_bot/data/fetchers/__init__.py to export fetch_all_data(). Do NOT modify existing fetch_fixtures(), fetch_team_form(), fetch_injuries(), fetch_odds() signatures or behavior. Existing code depends on them.</description>
+      <source>Story AC #1, Integration points</source>
+    </constraint>
+    <constraint>
+      <name>Data Source Priority</name>
+      <description>Fixtures: API-Football only (no fallback). Form: API-Football primary, ESPN backup. Injuries: API-Football only (no fallback). Odds: API-Football only (no fallback planned in story 2.5). H2H: API-Football only (ESPN future).</description>
+      <source>Story AC #2, Story Dev Notes - Fallback Decision Tree</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>fetch_all_data</name>
+      <kind>async function</kind>
+      <signature>async def fetch_all_data(fixture_date: Optional[str] = None, leagues: Optional[list[str]] = None) -> Optional[dict[str, Any]]</signature>
+      <path>src/bet_bot/data/fetchers/__init__.py</path>
+      <description>Main orchestration function. Coordinates fetching from multiple sources with graceful degradation. Returns dict with keys: fixtures, form_data, injuries, odds, h2h. Each value is a list/dict or None if no data retrieved. Called by Story 8.1 (CLI integration).</description>
+    </interface>
+    <interface>
+      <name>fetch_fixtures</name>
+      <kind>async function</kind>
+      <signature>async def fetch_fixtures(date: Optional[str] = None, league: Optional[str] = None) -> list[Fixture]</signature>
+      <path>src/bet_bot/data/fetchers/api_football.py</path>
+      <description>Fetch fixtures from API-Football for given date and optional league filter. Returns list (empty if no matches). No fallback in fetch_all_data() - if fails, set to [].</description>
+    </interface>
+    <interface>
+      <name>fetch_team_form</name>
+      <kind>async function</kind>
+      <signature>async def fetch_team_form(team_id: str, league_id: str, team_name: str) -> Optional[TeamForm]</signature>
+      <path>src/bet_bot/data/fetchers/api_football.py</path>
+      <description>Fetch team form from API-Football. Returns TeamForm or None. Used as primary in fetch_all_data(). If fails, fallback to fetch_team_form_espn().</description>
+    </interface>
+    <interface>
+      <name>fetch_team_form_espn</name>
+      <kind>async function</kind>
+      <signature>async def fetch_team_form_espn(team_name: str, league: str) -> Optional[TeamForm]</signature>
+      <path>src/bet_bot/data/fetchers/espn_scraper.py</path>
+      <description>Fetch team form from ESPN scraper (fallback only). Returns TeamForm or None. Rate limited to 30/min to avoid blocks. Used as backup if API-Football form unavailable.</description>
+    </interface>
+    <interface>
+      <name>fetch_injuries</name>
+      <kind>async function</kind>
+      <signature>async def fetch_injuries(team_id: str) -> Optional[list[Injury]]</signature>
+      <path>src/bet_bot/data/fetchers/api_football.py</path>
+      <description>Fetch injury data from API-Football for team. Returns list of Injury or None. No fallback - if fails, set injuries to [] for team.</description>
+    </interface>
+    <interface>
+      <name>fetch_odds</name>
+      <kind>async function</kind>
+      <signature>async def fetch_odds(fixture_id: str) -> Optional[Odds]</signature>
+      <path>src/bet_bot/data/fetchers/api_football.py</path>
+      <description>Fetch odds from API-Football for fixture. Returns Odds or None. No fallback in story 2.5 - if fails, set odds to None for fixture.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests use pytest with pytest-asyncio and unittest.mock for async function testing. Test patterns: mock httpx responses using AsyncMock, verify return types with Pydantic models, test both success and failure paths, verify logging at appropriate levels (INFO for success, WARNING for fallback, CRITICAL for halt). Coverage target: 85%+ for fetch_all_data() function. Test structure: setup mock fixtures, call function, assert results match expectations, verify logs contain expected messages.
+    </standards>
+    <locations>
+      tests/unit/ - Unit tests for individual functions and error cases
+      tests/integration/ - Integration tests for full pipeline (if needed)
+    </locations>
+    <ideas>
+      - [AC#1, #2, #10] Test fetch_all_data() with all sources succeeding: Mock all fetchers to return valid data, verify all keys populated in result dict, verify source tracking metadata included
+      - [AC#2, #3] Test with API-Football failure (timeout): Mock fetch_fixtures to raise TimeoutException, verify result[fixtures] = [] and warning logged, verify other sources still attempted
+      - [AC#2, #3] Test with ESPN form scraper fallback: Mock fetch_team_form to fail, scrape_espn_form to succeed, verify form data includes ESPN results, verify log shows fallback was used
+      - [AC#2, #3] Test with partial data missing: Mock fetch_injuries to return empty for some teams, verify result continues, missing teams noted in logs
+      - [AC#3, #6] Test authentication error halting pipeline: Mock fetch_fixtures to raise APIAuthenticationError, verify function returns None immediately (no further fetches), verify CRITICAL error logged
+      - [AC#4] Test source tracking metadata: Verify result includes which sources used (API-Football success count, ESPN fallback count), verify logs summarize sources at end
+      - [AC#9] Test concurrency limits: Verify ESPN scraper uses Semaphore(5) to limit concurrent requests, verify other fetchers respect per-API rate limiters
+      - [AC#8] Test empty fixture list handling: Mock fetch_fixtures to return [], verify not treated as error, form/injuries/odds still attempted for teams in league (or log "no matches")
+    </ideas>
+  </tests>
+</story-context>
