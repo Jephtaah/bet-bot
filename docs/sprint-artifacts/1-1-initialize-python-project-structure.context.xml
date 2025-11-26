@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1</storyId>
+    <title>Initialize Python Project Structure</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24T14:35:00Z</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-1-initialize-python-project-structure.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>set up the basic Python project with proper directory structure</iWant>
+    <soThat>I have a foundation for all subsequent development</soThat>
+    <tasks>
+      - [ ] Set up directory structure (AC: #1-2)
+        - [ ] Create `/src/bet_bot/` directory
+        - [ ] Create `/src/bet_bot/__init__.py` (package marker)
+        - [ ] Create `/tests/` directory with `__init__.py`
+        - [ ] Create `/config/` directory
+        - [ ] Create root `README.md`
+
+      - [ ] Create Python configuration files (AC: #6-7)
+        - [ ] Create `requirements.txt` with core dependencies listed (typer, pydantic, httpx, asyncio, pandas, rich, python-dotenv, pytest, mypy, ruff)
+        - [ ] Create `pytest.ini` with test configuration
+        - [ ] Create `setup.py` or `pyproject.toml` for package metadata
+
+      - [ ] Create environment configuration (AC: #5)
+        - [ ] Create `.env.template` with: OPENAI_API_KEY, API_FOOTBALL_KEY, ODDS_API_KEY, LOG_LEVEL
+        - [ ] Document that users must copy `.env.template` to `.env` locally
+
+      - [ ] Create git configuration (AC: #8)
+        - [ ] Create `.gitignore` with Python standard patterns
+        - [ ] Include: `__pycache__/`, `.venv/`, `.env`, `*.pyc`, `*.egg-info/`, `.pytest_cache/`, etc.
+
+      - [ ] Validation (AC: all)
+        - [ ] Run `python -m pip install -r requirements.txt` without errors
+        - [ ] Run `pytest --collect-only` to verify pytest recognizes test directory
+        - [ ] Verify all `.py` files contain valid syntax: `python -m py_compile`
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Create `bet-bot/` project directory with standard Python layout</criterion>
+    <criterion id="2">Set up `/src/bet_bot/` package structure with `__init__.py` files</criterion>
+    <criterion id="3">Create `/tests/` directory for unit/integration tests</criterion>
+    <criterion id="4">Create `/config/` directory for configuration files</criterion>
+    <criterion id="5">Create `.env.template` with required environment variables</criterion>
+    <criterion id="6">Create `requirements.txt` with all dependencies listed</criterion>
+    <criterion id="7">Create `pytest.ini` for test configuration</criterion>
+    <criterion id="8">Create `.gitignore` (Python standard)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Technology Stack, System Architecture, Module Breakdown, Error Handling</section>
+        <snippet>Python 3.10+ with async/await, Pydantic for validation, typer for CLI, pytest for testing. Core dependencies include pandas, rich, python-dotenv, aiohttp/httpx, and openai SDK.</snippet>
+      </doc>
+      <doc>
+        <path>docs/development-stories.md</path>
+        <title>Development Stories</title>
+        <section>PHASE 1: Foundation &amp; CLI Setup</section>
+        <snippet>Phase 1 establishes foundation: project structure, CLI setup, configuration management, and structured logging. This story (1.1) initializes the Python project with standard directory structure.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Rules and Standards</title>
+        <section>Python API Client Implementation, Async Patterns, Error Handling, CLI Development, Logging</section>
+        <snippet>Python 3.10+ with strict typing, httpx for HTTP (not requests), tenacity for retry logic, Pydantic for validation, structured logging to file and console. Standard patterns for config management and error handling.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>.gitignore</path>
+        <kind>config</kind>
+        <reason>Template for Python standard gitignore patterns - reference for AC #8</reason>
+      </artifact>
+      <artifact>
+        <path>requirements.txt</path>
+        <kind>config</kind>
+        <reason>Dependency manifest - will be created in this story per AC #6</reason>
+      </artifact>
+      <artifact>
+        <path>.env.template</path>
+        <kind>config</kind>
+        <reason>Environment variable template - will be created in this story per AC #5</reason>
+      </artifact>
+      <artifact>
+        <path>pytest.ini</path>
+        <kind>config</kind>
+        <reason>Test configuration - will be created in this story per AC #7</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <ecosystem name="Python">
+        <package name="typer" version="0.9+" desc="CLI framework with type hints" required="true"/>
+        <package name="pydantic" version="2.0+" desc="Data validation with type hints" required="true"/>
+        <package name="httpx" version="0.24+" desc="Async HTTP client (NOT aiohttp)" required="true"/>
+        <package name="asyncio" version="builtin" desc="Native async support" required="true"/>
+        <package name="pandas" version="2.0+" desc="Data manipulation and analysis" required="true"/>
+        <package name="rich" version="13.0+" desc="Beautiful terminal formatting" required="true"/>
+        <package name="python-dotenv" version="1.0+" desc="Environment variable management" required="true"/>
+        <package name="openai" version="1.0+" desc="OpenAI API SDK" required="true"/>
+        <package name="tenacity" version="8.2+" desc="Retry logic with exponential backoff" required="true"/>
+        <package name="pytest" version="7.0+" desc="Testing framework" required="true" dev="true"/>
+        <package name="mypy" version="1.0+" desc="Static type checking" required="true" dev="true"/>
+        <package name="ruff" version="0.1+" desc="Fast Python linter" required="true" dev="true"/>
+        <package name="beautifulsoup4" version="4.12+" desc="Web scraping (ESPN/FlashScore)" required="false"/>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <category>Language &amp; Version</category>
+      <description>Python 3.10+ required for type hints syntax and all subsequent development</description>
+    </constraint>
+    <constraint>
+      <category>Project Layout</category>
+      <description>Must use standard Python layout with `/src/bet_bot/` package separation from tests. This enables proper package installation and prevents import conflicts.</description>
+    </constraint>
+    <constraint>
+      <category>Type Safety</category>
+      <description>All code must use type hints throughout project. Enforce with mypy in CI/tests.</description>
+    </constraint>
+    <constraint>
+      <category>Error Handling</category>
+      <description>From CLAUDE.md: Custom exception hierarchy required. Never use bare except or generic Exception. All exceptions inherit from BetBotError base class.</description>
+    </constraint>
+    <constraint>
+      <category>API Keys</category>
+      <description>CRITICAL: API keys must NEVER be hardcoded. Use .env file (gitignored) and load via python-dotenv. .env.template must document required keys.</description>
+    </constraint>
+    <constraint>
+      <category>Async Patterns</category>
+      <description>From CLAUDE.md: Use asyncio for I/O-bound operations. Single global httpx.AsyncClient instance (never multiple). Use semaphores to limit concurrent requests.</description>
+    </constraint>
+    <constraint>
+      <category>HTTP Client</category>
+      <description>CRITICAL: Use httpx (NOT aiohttp, NOT requests). Enables sync/async compatibility with connection pooling, HTTP/2, and proper timeout handling.</description>
+    </constraint>
+    <constraint>
+      <category>Logging</category>
+      <description>From CLAUDE.md: Structured JSON logging to both console (human-readable) and file. Never use print() for logging. Respect LOG_LEVEL env var.</description>
+    </constraint>
+    <constraint>
+      <category>Testing</category>
+      <description>pytest with 80%+ coverage target. Tests in /tests/ with unit/ and integration/ subdirectories. Tests must validate both happy path and error cases.</description>
+    </constraint>
+    <constraint>
+      <category>Configuration</category>
+      <description>Use Pydantic models for all configuration. Validate required fields at startup. Provide clear error messages when configuration is missing.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>CLI Entry Point</name>
+      <kind>CLI command</kind>
+      <signature>python -m bet_bot.cli analyze --bankroll FLOAT [--league LEAGUE] [--threshold THRESHOLD] [--verbose]</signature>
+      <path>src/bet_bot/cli/main.py (will be created in story 1.3)</path>
+      <description>Primary user-facing CLI interface for analysis</description>
+    </interface>
+    <interface>
+      <name>Configuration System</name>
+      <kind>Python class</kind>
+      <signature>Config class with properties: openai_api_key, api_football_key, odds_api_key, log_level</signature>
+      <path>src/bet_bot/config/config.py (will be created in story 1.4)</path>
+      <description>Singleton config loaded from .env file via python-dotenv</description>
+    </interface>
+    <interface>
+      <name>Logging Setup</name>
+      <kind>Python function</kind>
+      <signature>setup_logging(level: str) -&gt; None</signature>
+      <path>src/bet_bot/utils/logging.py (will be created in story 1.5)</path>
+      <description>Configures structured logging to console and file</description>
+    </interface>
+    <interface>
+      <name>Exception Hierarchy</name>
+      <kind>Python classes</kind>
+      <signature>BetBotError base class, APIError, DataValidationError, etc. subclasses</signature>
+      <path>src/bet_bot/exceptions.py (will be created in story 1.2)</path>
+      <description>Custom exception types for all error scenarios per CLAUDE.md</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      From CLAUDE.md: pytest framework for unit/integration tests with 80%+ coverage target. Tests validate happy paths and error cases. Use fixtures for setup. Async tests use pytest-asyncio. Pydantic models validated with example data. No test should require external API keys (use mocks/stubs).
+    </standards>
+    <locations>
+      /tests/ (root directory for all tests)
+      /tests/__init__.py (package marker)
+      /tests/unit/ (unit tests for individual modules)
+      /tests/integration/ (integration tests for component interactions)
+      /tests/conftest.py (pytest fixtures and configuration)
+    </locations>
+    <ideas>
+      Test Ideas Mapped to Acceptance Criteria:
+
+      AC #1-2 (Directory structure): Verify all directories exist, __init__.py files present, can import bet_bot package
+      AC #3 (Tests directory): Verify /tests/ exists, pytest recognizes it via `pytest --collect-only`
+      AC #4 (Config directory): Verify /config/ exists (optional in Phase 1, used in story 1.4)
+      AC #5 (.env.template): Verify file exists, contains required keys (OPENAI_API_KEY, API_FOOTBALL_KEY, ODDS_API_KEY, LOG_LEVEL)
+      AC #6 (requirements.txt): Verify file exists, all dependencies listed with versions, `pip install -r requirements.txt` succeeds without errors
+      AC #7 (pytest.ini): Verify pytest recognizes test directory, `pytest --collect-only` runs without errors
+      AC #8 (.gitignore): Verify Python standard patterns present, especially __pycache__/, .venv/, .env, *.pyc, .pytest_cache/
+
+      Additional tests:
+      - Verify project can be installed: `pip install -e .`
+      - Verify all .py files have valid syntax: `python -m py_compile src/bet_bot/**/*.py`
+      - Verify mypy type checking configured (run mypy on src/)
+      - Verify no hardcoded API keys in any files
+    </ideas>
+  </tests>
+</story-context>

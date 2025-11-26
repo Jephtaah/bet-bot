@@ -1,0 +1,231 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/1-2" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>2</storyId>
+    <title>Install & Configure Dependencies</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24T14:40:00Z</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-2-install-configure-dependencies.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>to install all required dependencies for the project</iWant>
+    <soThat>I can start building features immediately</soThat>
+    <tasks>
+      <task id="1">Create and activate virtual environment (AC: #1)
+        <subtask>Run `python -m venv venv` to create venv</subtask>
+        <subtask>Activate venv: `source venv/bin/activate` (macOS/Linux) or `venv\Scripts\activate` (Windows)</subtask>
+        <subtask>Verify Python version: `python --version` (must be 3.10+)</subtask>
+        <subtask>Document activation steps in README.md</subtask>
+      </task>
+      <task id="2">Install core runtime dependencies (AC: #2)
+        <subtask>Install `typer` (CLI framework with type hints)</subtask>
+        <subtask>Install `pydantic` (runtime validation, data models)</subtask>
+        <subtask>Install `httpx` (async HTTP client with connection pooling)</subtask>
+        <subtask>Install `pandas` (data manipulation and analysis)</subtask>
+        <subtask>Install `rich` (terminal formatting and tables)</subtask>
+        <subtask>Install `python-dotenv` (environment variable loading)</subtask>
+        <subtask>Install `openai` (OpenAI SDK for GPT access)</subtask>
+        <subtask>Install `tenacity` (retry logic with exponential backoff)</subtask>
+        <subtask>Install `beautifulsoup4` (web scraping for ESPN/FlashScore)</subtask>
+      </task>
+      <task id="3">Install development dependencies (AC: #3)
+        <subtask>Install `pytest` (testing framework)</subtask>
+        <subtask>Install `pytest-asyncio` (async test support)</subtask>
+        <subtask>Install `mypy` (static type checking)</subtask>
+        <subtask>Install `ruff` (fast Python linter)</subtask>
+      </task>
+      <task id="4">Generate and validate requirements.txt (AC: #4)
+        <subtask>Run `pip freeze > requirements.txt` to capture pinned versions</subtask>
+        <subtask>Document which packages are core vs dev (comments in file)</subtask>
+        <subtask>Verify no conflicting dependency versions</subtask>
+        <subtask>Test clean install: `pip install -r requirements.txt` from fresh venv</subtask>
+      </task>
+      <task id="5">Validate all imports (AC: #6)
+        <subtask>Create `/tests/verify_imports.py` validation script</subtask>
+        <subtask>Import each package: typer, pydantic, httpx, pandas, rich, openai, tenacity, bs4</subtask>
+        <subtask>Run: `python tests/verify_imports.py` → all imports succeed</subtask>
+        <subtask>No ImportError or version conflicts</subtask>
+      </task>
+      <task id="6">Documentation updates (AC: #5, #7)
+        <subtask>Update README.md with Python version requirement (3.10+)</subtask>
+        <subtask>Add "Installation" section with venv setup steps</subtask>
+        <subtask>Document difference between dev and runtime dependencies</subtask>
+        <subtask>Include troubleshooting section for common install issues</subtask>
+      </task>
+      <task id="7">Validation (AC: all)
+        <subtask>Run `pip list` and verify all required packages present with correct versions</subtask>
+        <subtask>Run `python -c "import bet_bot"` successfully</subtask>
+        <subtask>Run `pytest --version` to verify pytest available</subtask>
+        <subtask>Run `mypy --version` to verify type checker available</subtask>
+        <subtask>Run import validation script without errors</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Create virtual environment (`venv`)</criterion>
+    <criterion id="2">Install: `typer`, `pydantic`, `httpx`, `asyncio`, `pandas`, `rich`, `python-dotenv`, `openai`, `tenacity`, `beautifulsoup4`</criterion>
+    <criterion id="3">Install dev dependencies: `pytest`, `mypy`, `ruff`, `pytest-asyncio`</criterion>
+    <criterion id="4">Generate `requirements.txt` with pinned versions</criterion>
+    <criterion id="5">Document Python version requirement (3.10+)</criterion>
+    <criterion id="6">All imports work without errors</criterion>
+    <criterion id="7">Virtual environment activation documented in README</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Technology Stack</section>
+        <snippet>Core Dependencies for bet-bot project including httpx (async HTTP client), pydantic (data validation), tenacity (retry logic), and beautifulsoup4 (web scraping). Python 3.10+ required for modern syntax and type hints.</snippet>
+      </doc>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Development & Testing</section>
+        <snippet>Development tools: pytest for unit/integration tests, pytest-asyncio for async test support, ruff for linting, mypy for type checking. Minimum 80% code coverage required with 100% coverage for critical paths.</snippet>
+      </doc>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Error Handling Strategy</section>
+        <snippet>Graceful error handling for API failures, data quality issues, and OpenAI failures. Retry logic with exponential backoff using tenacity. Dependency versions tuned for stability and async compatibility.</snippet>
+      </doc>
+      <doc>
+        <path>docs/requirements.md</path>
+        <title>Requirements Document</title>
+        <section>Constraints & Requirements</section>
+        <snippet>Python 3.10+ required for modern syntax and type hints. Package management via pip with requirements.txt for pinned versions ensuring reproducibility. Environment variables managed via python-dotenv.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Development Guidelines</title>
+        <section>PYTHON API CLIENT IMPLEMENTATION</section>
+        <snippet>HTTP Client Architecture using httpx (NOT requests/aiohttp). Connection pooling with max_connections=100, keepalive=20. HTTP/2 enabled. Tenacity for retry logic with exponential backoff (2s, 4s, 8s, 16s, 32s). Pydantic v2 for data validation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary</title>
+        <section>Core Models</section>
+        <snippet>Pydantic models define data structures: Team, Fixture, AIAnalysis, MarketAnalysis, Pick. Models include field validators and JSON serialization support. Strict validation enforces data quality.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>requirements.txt</path>
+        <kind>configuration</kind>
+        <symbol>dependency-list</symbol>
+        <lines>1-17</lines>
+        <reason>Defines all core runtime and development dependencies. Created in story 1-1, will be pinned in story 1-2 during venv setup and pip freeze.</reason>
+      </artifact>
+      <artifact>
+        <path>pyproject.toml</path>
+        <kind>configuration</kind>
+        <symbol>project-config</symbol>
+        <lines>1-86</lines>
+        <reason>Project metadata, build configuration, and tool configurations (mypy, ruff, pytest). Includes Python version requirement (3.10+) and package discovery settings. Tool configurations define linting and testing standards.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/__init__.py</path>
+        <kind>package-init</kind>
+        <symbol>__init__</symbol>
+        <reason>Package initialization file created in story 1-1. Import validation in story 1-2 will verify this file can be imported without errors.</reason>
+      </artifact>
+      <artifact>
+        <path>README.md</path>
+        <kind>documentation</kind>
+        <symbol>setup-docs</symbol>
+        <reason>Will be updated in story 1-2 with Python version requirement, venv setup steps, dev/runtime dependency explanation, and troubleshooting section.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <runtime>
+        <package name="typer" version=">=0.9.0">CLI framework with type hints</package>
+        <package name="pydantic" version=">=2.0.0">Data validation with type hints and strict mode</package>
+        <package name="httpx" version=">=0.24.0">Async HTTP client with connection pooling (NOT requests/aiohttp)</package>
+        <package name="pandas" version=">=2.0.0">Data manipulation and analysis</package>
+        <package name="rich" version=">=13.0.0">Beautiful terminal formatting and tables</package>
+        <package name="python-dotenv" version=">=1.0.0">Environment variable management (.env files)</package>
+        <package name="openai" version=">=1.0.0">OpenAI API SDK for GPT access</package>
+        <package name="tenacity" version=">=8.2.0">Retry logic with exponential backoff</package>
+        <package name="beautifulsoup4" version=">=4.12.0">Web scraping for ESPN/FlashScore fallback</package>
+      </runtime>
+      <development>
+        <package name="pytest" version=">=7.0.0">Testing framework for unit and integration tests</package>
+        <package name="pytest-asyncio" version=">=0.21.0">Async test support via plugin</package>
+        <package name="pytest-cov" version=">=4.0.0">Code coverage reporting (80%+ target)</package>
+        <package name="mypy" version=">=1.0.0">Static type checking with strict mode enabled</package>
+        <package name="ruff" version=">=0.1.0">Fast Python linter (replaces flake8, isort, etc.)</package>
+      </development>
+      <system>
+        <requirement name="python" version=">=3.10">Python 3.10+ required for modern syntax (match statements, type hints, performance)</requirement>
+        <requirement name="pip">Package installer (included with Python)</requirement>
+        <requirement name="venv">Virtual environment module (included with Python)</requirement>
+      </system>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Use httpx (NOT requests or aiohttp) for all HTTP operations to ensure async/sync compatibility and HTTP/2 support</constraint>
+    <constraint>Use Pydantic v2 with strict mode for all data validation models</constraint>
+    <constraint>Implement retry logic using tenacity library (NOT custom retry loops) with exponential backoff: 2s, 4s, 8s, 16s, 32s</constraint>
+    <constraint>Python 3.10+ required for modern syntax and type hints</constraint>
+    <constraint>All imports must work without errors after installation (verified via tests/verify_imports.py)</constraint>
+    <constraint>Virtual environment must be activated before running any commands</constraint>
+    <constraint>Requirements.txt must have pinned versions for reproducibility (pip freeze output)</constraint>
+    <constraint>Dev dependencies must be separate from runtime dependencies (documented in requirements.txt)</constraint>
+    <constraint>Use standard library logging (configured in utils/logging.py per CLAUDE.md)</constraint>
+    <constraint>Package structure: src/bet_bot/ with subpackages for cli/, data/, analysis/, display/, utils/</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Module Imports</name>
+      <kind>Python Package Imports</kind>
+      <signature>import typer, pydantic, httpx, pandas, rich, openai, tenacity, beautifulsoup4</signature>
+      <path>src/bet_bot/</path>
+    </interface>
+    <interface>
+      <name>Virtual Environment</name>
+      <kind>System CLI</kind>
+      <signature>source venv/bin/activate (macOS/Linux) or venv\Scripts\activate (Windows)</signature>
+      <path>Project root</path>
+    </interface>
+    <interface>
+      <name>Package Installation</name>
+      <kind>pip command</kind>
+      <signature>pip install -r requirements.txt</signature>
+      <path>Project root</path>
+    </interface>
+    <interface>
+      <name>Import Verification</name>
+      <kind>Python script</kind>
+      <signature>python tests/verify_imports.py</signature>
+      <path>tests/verify_imports.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <paragraph>Testing in bet-bot follows pytest framework with asyncio support via pytest-asyncio plugin. Tests are organized in tests/ directory with unit/ and integration/ subdirectories. Minimum 80% code coverage required for all code, with 100% coverage target for critical paths (EV calculation, edge detection, confidence scoring). Type checking enforced via mypy with strict mode. Linting via ruff with strict configuration. All development dependencies (pytest, pytest-cov, mypy, ruff) installed in venv alongside runtime dependencies.</paragraph>
+    </standards>
+    <locations>
+      <location>tests/</location>
+      <location>tests/unit/</location>
+      <location>tests/integration/</location>
+      <location>tests/verify_imports.py (import validation script)</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test virtual environment creation: Verify venv directory exists and Python version matches 3.10+</idea>
+      <idea ac="2">Test core runtime dependency imports: Create tests/verify_imports.py that imports all 9 core packages without errors</idea>
+      <idea ac="3">Test dev dependency availability: Verify pytest, mypy, ruff can be invoked from command line</idea>
+      <idea ac="4">Test requirements.txt format: Verify file contains all dependencies with pinned versions and no conflicts</idea>
+      <idea ac="6">Test import validation script: Run verify_imports.py and ensure all imports succeed</idea>
+      <idea ac="7">Test README documentation: Verify README includes Python 3.10+ requirement, venv activation steps, and troubleshooting section</idea>
+    </ideas>
+  </tests>
+</story-context>
