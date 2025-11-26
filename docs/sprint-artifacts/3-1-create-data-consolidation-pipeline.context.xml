@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>1</storyId>
+    <title>Create Data Consolidation Pipeline</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-26</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-1-create-data-consolidation-pipeline.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>As a developer</asA>
+    <iWant>I want to merge fixture data from multiple sources into a unified format</iWant>
+    <soThat>analysis has consistent, clean data</soThat>
+    <tasks>
+      <task id="1">Review existing Fixture and data models (AC: #1, #2, #6)</task>
+      <task id="2">Analyze fetch_all_data() output structure (AC: #2, #3)</task>
+      <task id="3">Create consolidation module structure (AC: #1)</task>
+      <task id="4">Implement base consolidate_fixtures() function (AC: #2, #6, #10)</task>
+      <task id="5">Implement fixture base data population (AC: #3, #5)</task>
+      <task id="6">Implement form data merging (AC: #3, #4, #5)</task>
+      <task id="7">Implement injuries data merging (AC: #3, #4, #5)</task>
+      <task id="8">Implement odds data merging (AC: #3, #4, #5)</task>
+      <task id="9">Implement head-to-head data merging (AC: #3, #4, #5)</task>
+      <task id="10">Implement conflict resolution and source tracking (AC: #4, #7)</task>
+      <task id="11">Implement edge case handling (AC: #8, #9)</task>
+      <task id="12">Implement validation and error handling (AC: #6)</task>
+      <task id="13">Export and integrate (AC: #10)</task>
+      <task id="14">Write unit tests (AC: #2, #3, #6, #10)</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Create `/src/bet_bot/data/consolidation/consolidator.py`</criterion>
+    <criterion id="2">Implement `consolidate_fixtures()` function that accepts raw fixture list from `fetch_all_data()`</criterion>
+    <criterion id="3">Merge API-Football + ESPN + scrape data into single `Fixture` objects</criterion>
+    <criterion id="4">Handle conflicting data by preferring fresher source (track timestamps for all data points)</criterion>
+    <criterion id="5">Normalize all fields to standard format matching `Fixture` Pydantic model</criterion>
+    <criterion id="6">Return list of `Fixture` objects with complete metadata including source lineage</criterion>
+    <criterion id="7">Preserve all original data sources for auditability (don't discard secondary sources)</criterion>
+    <criterion id="8">Handle edge case: fixture missing optional data (form, injuries, odds) - continue with partial data</criterion>
+    <criterion id="9">Handle edge case: conflicting data from different sources - log warning and prefer fresher</criterion>
+    <criterion id="10">Return `list[Fixture]` with data quality metadata attached to each fixture</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification - System Architecture</title>
+        <section>Data Consolidation Layer</section>
+        <snippet>Data consolidation specification: Purpose is to normalize data from multiple sources into unified schema with modules normalizer.py, validator.py, merger.py. Key responsibility: Take messy data from 3+ sources → output clean `Fixture[]` with consistent fields. Data quality rules: Reject odds > 1h stale, Reject injuries > 12h stale, Accept form up to 24h, H2H is static.</snippet>
+      </doc>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification - Error Handling Strategy</title>
+        <section>Error Handling Strategy</section>
+        <snippet>API Failures use try/except patterns with custom exceptions. Data Quality Issues checked with timedelta comparisons (odds_age > 1h, injuries_missing). OpenAI Failures use RateLimitError and APIError handling. All following CLAUDE.md patterns for structured error handling.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/2-5-implement-graceful-degradation-for-data-sources.md</path>
+        <title>Story 2.5 - Graceful Degradation for Data Sources</title>
+        <section>Data Structure from fetch_all_data()</section>
+        <snippet>fetch_all_data() returns dict with: fixtures (list), form_data (dict keyed by team_id), injuries (dict keyed by team_id), odds (dict keyed by fixture_id), h2h (dict keyed by fixture_id). All data pre-validated by individual fetchers. Missing data represented as: [] (empty list) or None (not found).</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>model</kind>
+        <symbol>Fixture</symbol>
+        <lines>172-289</lines>
+        <reason>Core data model that consolidation layer must populate. Defines all fields: fixture_id, kickoff_time, home_team, away_team, league, odds, head_to_head_history. Includes Pydantic validators for field validation.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>model</kind>
+        <symbol>Team</symbol>
+        <lines>89-170</lines>
+        <reason>Team model used within Fixture. Defines: id, name, form_5_games, avg_goals_for, avg_goals_against, injuries list. Consolidation must populate these for both home and away teams.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>model</kind>
+        <symbol>League</symbol>
+        <lines>30-87</lines>
+        <reason>League model used within Fixture. Defines: league_id, league_name, league_country, league_season. Must be populated from API-Football fixture data during consolidation.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/form.py</path>
+        <kind>model</kind>
+        <symbol>TeamForm</symbol>
+        <reason>Form data model from fetch_all_data(). Consolidation merges this into Fixture.home_team and Fixture.away_team form fields.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/injuries.py</path>
+        <kind>model</kind>
+        <symbol>InjuredPlayer</symbol>
+        <reason>Injury model from fetch_all_data(). Consolidation merges list of injuries into Fixture.home_team.injuries and Fixture.away_team.injuries.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/odds.py</path>
+        <kind>model</kind>
+        <symbol>Odds</symbol>
+        <reason>Odds model from fetch_all_data(). Consolidation merges into Fixture.odds field which stores dict[str, dict[str, float]] (market -> {outcome: odds}).</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/fetchers/__init__.py</path>
+        <kind>function</kind>
+        <symbol>fetch_all_data</symbol>
+        <lines>150-370</lines>
+        <reason>Output of Story 2.5. Consolidation receives this dict structure with fixtures, form_data, injuries, odds, h2h keys. Understanding this output format is critical for mapping to Fixture model.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/fetchers/api_football.py</path>
+        <kind>module</kind>
+        <symbol>fetch_fixtures, fetch_team_form, fetch_injuries, fetch_odds</symbol>
+        <reason>Individual fetcher functions called by fetch_all_data(). Consolidation layer doesn't call these directly but needs to understand their return types and structure to properly merge their output.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>exceptions</kind>
+        <symbol>BetBotError, APIError, DataValidationError, ConsolidationError</symbol>
+        <reason>Exception hierarchy for consolidation error handling. AC#12 requires try/except to log on failures and skip fixtures. Use ConsolidationError for critical consolidation failures.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pydantic" version="v2">For Pydantic BaseModel and validators - already installed</package>
+        <package name="asyncio">Native Python async library - no install needed</package>
+        <package name="logging">Native Python logging module - no install needed</package>
+        <package name="typing">Native Python type hints - no install needed</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Follow CLAUDE.md Error Handling - Mandatory Patterns (CLAUDE.md #3): All API errors must use custom exception hierarchy, log with context, never swallow silently.</constraint>
+    <constraint type="pattern">Follow CLAUDE.md Async/Await Patterns (CLAUDE.md #1): Mark consolidate_fixtures() as async for consistency with rest of pipeline, though no blocking I/O calls are expected.</constraint>
+    <constraint type="architecture">Input structure must match fetch_all_data() output from Story 2.5: dict with keys fixtures, form_data, injuries, odds, h2h. Missing sources represented as empty list [] or None.</constraint>
+    <constraint type="architecture">Output must be list[Fixture] where each Fixture has complete metadata. Cannot return partial structures - use Pydantic model validation to ensure all required fields are populated.</constraint>
+    <constraint type="architecture">Source preference logic from technical-spec.md: API-Football is always primary for fixtures/injuries/odds/h2h. Form uses API-Football primary with ESPN fallback (already tracked by fetch_all_data()). Conflicts resolved by timestamp (prefer fresher data).</constraint>
+    <constraint type="data-quality">Data freshness rules from technical-spec.md: Odds > 1h stale should be flagged (but not rejected - Story 3.2 validates). Injuries > 12h stale should be flagged. Form data up to 24h is acceptable. H2H is static (no freshness check).</constraint>
+    <constraint type="module-structure">Create new directory `/src/bet_bot/data/consolidation/` with: __init__.py (exports consolidate_fixtures), consolidator.py (main logic), merger.py (data merging utilities). No changes to existing fetcher modules.</constraint>
+    <constraint type="integration">Consolidation output feeds into Story 3.2 (data freshness validation) and Story 3.3 (quality scoring). Must preserve all source metadata for these downstream consumers to assess data quality.</constraint>
+    <constraint type="error-handling">Never crash pipeline on individual fixture consolidation failure. Log exception, skip that fixture, continue with others. Only raise ConsolidationError if ALL fixtures fail (critical failure).</constraint>
+    <constraint type="naming">Use underscore prefix for internal helper functions: _merge_form_data(), _resolve_conflict(), _track_source() etc. Public API is only consolidate_fixtures().</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>consolidate_fixtures</name>
+      <kind>async function</kind>
+      <signature>async def consolidate_fixtures(raw_data: dict[str, Any], fixture_list: list[dict]) -> list[Fixture]</signature>
+      <path>src/bet_bot/data/consolidation/consolidator.py</path>
+      <description>Main consolidation orchestration function. Accepts raw output from fetch_all_data() and original fixture list from API-Football, returns list of Fixture objects with all fields populated and source metadata tracked.</description>
+    </interface>
+    <interface>
+      <name>fetch_all_data</name>
+      <kind>async function (input provider)</kind>
+      <signature>async def fetch_all_data() -> Optional[dict[str, Any]]</signature>
+      <path>src/bet_bot/data/fetchers/__init__.py</path>
+      <description>Upstream function (Story 2.5) that provides input dict with keys: fixtures, form_data, injuries, odds, h2h. Consolidation receives this and normalizes it to Fixture model.</description>
+    </interface>
+    <interface>
+      <name>Fixture (model)</name>
+      <kind>Pydantic BaseModel</kind>
+      <signature>class Fixture(BaseModel): fixture_id, kickoff_time, home_team, away_team, league, odds, head_to_head_history</signature>
+      <path>src/bet_bot/models/fixtures.py</path>
+      <description>Target data model for consolidation. All consolidation logic must populate Fixture instances to match this schema exactly.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Unit tests follow pytest patterns established in stories 2.1-2.5. Use unittest.mock for mocking API responses and Pydantic models. Async tests decorated with @pytest.mark.asyncio. Test both success and failure paths. Verify logging at appropriate levels (INFO for success, WARNING for fallback/partial data, CRITICAL for halt). Pydantic model instantiation must be actual (not mocked) to catch validation errors early.</standards>
+    <locations>tests/unit/test_consolidator.py (new file for this story). Reference existing test patterns in tests/unit/test_graceful_degradation.py and tests/unit/test_api_football.py for async test structure and mocking patterns.</locations>
+    <ideas>
+      <idea ac="2,3,6,10">Test consolidate_fixtures() with all sources succeeding: Mock API-Football fixture list (2-3 fixtures), mock form_data/injuries/odds from fetch_all_data(), verify all fields populated in result Fixtures, verify source_lineage tracked correctly</idea>
+      <idea ac="8">Test with missing optional data: Mock with no form_data, no injuries, no odds separately. Verify consolidation continues, missing fields handled gracefully (empty list or None as appropriate)</idea>
+      <idea ac="8,9">Test with partial data: Mock injuries partial (2/4 teams have injuries). Verify result includes empty list for missing teams, logs warning</idea>
+      <idea ac="4,9">Test source conflict resolution: Mock API-Football form older than ESPN form (timestamp comparison). Verify ESPN form used, logged as primary source preference</idea>
+      <idea ac="6,12">Test error handling: Mock malformed fixture data (missing required fields). Verify error logged, fixture skipped, consolidation continues with remaining fixtures</idea>
+      <idea ac="6,10">Test edge case: fixture with no data at all. Verify ConsolidationError raised only if ALL fixtures fail, not for individual fixture failures</idea>
+      <idea ac="10">Test data quality metadata: Verify each Fixture has source_lineage attached with timestamps and source names for downstream Story 3.2/3.3 validation</idea>
+      <idea ac="2,3,5">Test field normalization: Verify all API-Football nested structures (teams.home, teams.away, league.name) properly extracted and normalized to Team and League objects</idea>
+    </ideas>
+  </tests>
+</story-context>
