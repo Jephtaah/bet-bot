@@ -1,0 +1,193 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>3</storyId>
+    <title>Create CLI Entry Point with Typer</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-3-create-cli-entry-point-with-typer.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>to create a basic CLI command structure using Typer</iWant>
+    <soThat>I can build the `bet-bot analyze` command foundation</soThat>
+    <tasks>
+      - Create CLI module structure (AC: #1)
+        - Create `/src/bet_bot/cli/` directory (if not exists)
+        - Create `/src/bet_bot/cli/__init__.py`
+        - Create `/src/bet_bot/cli/main.py` as entry point
+        - Import Typer and initialize app: `app = typer.Typer()`
+      - Implement help command and app metadata (AC: #2, #7)
+        - Set Typer app name: `name="bet-bot"`
+        - Set Typer app help text: `help="Positive Expected Value Detection Tool for Football Betting"`
+        - Add version constant: `__version__ = "0.1.0"`
+        - Implement `--version` callback that prints version and exits
+        - Test: `python -m bet_bot.cli --help` shows help text
+        - Test: `python -m bet_bot.cli --version` shows version
+      - Implement analyze command stub (AC: #3, #4, #5, #6)
+        - Create `analyze()` function decorated with `@app.command()`
+        - Add `bankroll` parameter: `typer.Option(..., "--bankroll", "-b", help="Your betting bankroll")`
+        - Add `config` parameter: `typer.Option(None, "--config", "-c", help="Path to config file")`
+        - Validate bankroll is positive (raise error if &lt;= 0)
+        - Print confirmation message: "Starting analysis with bankroll: $X"
+        - Add docstring explaining command purpose
+        - Test: `python -m bet_bot.cli analyze --help` shows command help
+        - Test: `python -m bet_bot.cli analyze --bankroll 1000` runs without error
+      - Add input validation (AC: #4)
+        - Validate bankroll is float type
+        - Validate bankroll &gt; 0 (reject negative or zero)
+        - Show clear error message if validation fails
+        - Test edge cases: `--bankroll 0`, `--bankroll -100`, `--bankroll abc`
+      - Create executable entry point (AC: all)
+        - Add `if __name__ == "__main__": app()` to main.py
+        - Make CLI executable via `python -m bet_bot.cli`
+        - Test: `python -m bet_bot.cli analyze --bankroll 1000` runs successfully
+      - Documentation and validation (AC: all)
+        - Add inline comments explaining Typer configuration
+        - Verify all help text displays correctly
+        - Verify error messages are user-friendly
+        - Test all command variations work as expected
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Create `/src/bet_bot/cli/main.py` with Typer app setup
+    2. Implement basic `bet-bot --help` command
+    3. Implement stub `bet-bot analyze --help` command
+    4. Command accepts `--bankroll` argument (required, float)
+    5. Command accepts optional `--config` argument
+    6. Running `bet-bot analyze --bankroll 1000` prints "Starting analysis..."
+    7. Add version flag (`--version`)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>bet-bot Technical Specification</title>
+        <section>CLI Framework (Typer 0.12.0+)</section>
+        <snippet>CLI Framework: typer (simple, type-hinted command handling). Configuration & CLI modules handle user input, manage configurations. CLI Interface: bet-bot analyze --bankroll 1000</snippet>
+      </doc>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>bet-bot Technical Specification</title>
+        <section>Module Breakdown - Configuration & CLI</section>
+        <snippet>Purpose: Handle user input, manage configurations. Modules: main.py (Entry point, Typer CLI setup), commands.py (analyze command definition), config.py (Bankroll, API keys, preferences)</snippet>
+      </doc>
+      <doc>
+        <path>docs/development-stories.md</path>
+        <title>bet-bot Development Stories</title>
+        <section>Story 1.3: Create CLI Entry Point with Typer</section>
+        <snippet>Create /src/bet_bot/cli/main.py with Typer app setup. Implement basic bet-bot --help command. Command accepts --bankroll argument (required, float). Command accepts optional --config argument.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>bet-bot Project Rules - CLI Script Development</title>
+        <section>Typer CLI Structure - MANDATORY PATTERN</section>
+        <snippet>ALWAYS use Typer for CLI (NOT argparse). ALWAYS use type hints for arguments. ALWAYS provide help text for all commands. ALWAYS validate inputs at CLI boundary. ALWAYS use rich for beautiful output.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/bet_bot/__init__.py</path>
+        <kind>package</kind>
+        <symbol>__init__</symbol>
+        <lines>all</lines>
+        <reason>Root package structure already exists from Story 1.1</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/cli/__init__.py</path>
+        <kind>package</kind>
+        <symbol>__init__</symbol>
+        <lines>all</lines>
+        <reason>CLI package directory already created, ready for main.py implementation</reason>
+      </artifact>
+      <artifact>
+        <path>requirements.txt</path>
+        <kind>dependencies</kind>
+        <symbol>typer</symbol>
+        <lines>14</lines>
+        <reason>Typer 0.20.0 already installed with all dependencies (click, shellingham, typing-inspection) from Story 1.2</reason>
+      </artifact>
+      <artifact>
+        <path>pyproject.toml</path>
+        <kind>config</kind>
+        <symbol>project.scripts</symbol>
+        <lines>47-48</lines>
+        <reason>Entry point already configured: bet-bot = "bet_bot.cli.main:app". Will enable CLI execution once main.py is created.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="typer" version="0.20.0" required="true">CLI framework with type hints and automatic help generation</package>
+        <package name="click" version="8.1.8" required="true">Click dependency for Typer</package>
+        <package name="shellingham" version="1.5.4" required="true">Shell detection for Typer</package>
+        <package name="typing-inspection" version="0.4.2" required="true">Type inspection for Typer</package>
+        <package name="rich" version="14.2.0" required="true">Beautiful terminal formatting (future stories will use for output)</package>
+        <package name="pydantic" version="2.12.4" required="false">For future input validation via Pydantic models</package>
+        <package name="typing-extensions" version="4.15.0" required="true">Backported typing features for type hints</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>ALWAYS use Typer for CLI (NOT argparse) - mandated by CLAUDE.md</constraint>
+    <constraint>ALWAYS use type hints for all arguments and options - mandated by Python 3.10+ requirement</constraint>
+    <constraint>ALWAYS provide help text for all commands and arguments - mandated by CLAUDE.md</constraint>
+    <constraint>ALWAYS validate inputs at CLI boundary - validation must happen before business logic</constraint>
+    <constraint>CLI layer must be thin - business logic goes in separate modules (future stories)</constraint>
+    <constraint>Use `python -m bet_bot.cli` execution pattern until proper installation - pyproject.toml entry point configured</constraint>
+    <constraint>Bankroll must be positive float - reject zero or negative values with clear error messages</constraint>
+    <constraint>Error messages must be user-friendly - never expose raw Python exceptions to users</constraint>
+    <constraint>Add version flag (--version) using Typer callback pattern - must exit immediately after printing</constraint>
+    <constraint>Keep stub implementation simple - full pipeline integration happens in Story 8.1</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>bet-bot CLI Entry Point</name>
+      <kind>Command Line Interface</kind>
+      <signature>python -m bet_bot.cli [--help] [--version]</signature>
+      <path>src/bet_bot/cli/main.py</path>
+    </interface>
+    <interface>
+      <name>analyze Command</name>
+      <kind>CLI Command</kind>
+      <signature>bet-bot analyze --bankroll &lt;float&gt; [--config &lt;path&gt;]</signature>
+      <path>src/bet_bot/cli/main.py::analyze</path>
+    </interface>
+    <interface>
+      <name>Typer App Instance</name>
+      <kind>Python Object</kind>
+      <signature>app = typer.Typer(name="bet-bot", help="...", add_completion=False)</signature>
+      <path>src/bet_bot/cli/main.py::app</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing framework: pytest 8.4.2 with pytest-asyncio for async support. All CLI tests should be in tests/unit/test_cli.py. Use subprocess or typer.testing.CliRunner for command execution tests. Minimum 80% code coverage required. Test both success paths and error cases (invalid inputs, edge cases).
+    </standards>
+    <locations>
+      tests/unit/test_cli.py (create new file)
+      tests/ (root test directory already exists)
+    </locations>
+    <ideas>
+      <idea ac="AC #1">Test that main.py file exists and imports Typer successfully</idea>
+      <idea ac="AC #2">Test that --help flag displays help text and exits with code 0</idea>
+      <idea ac="AC #3">Test that analyze --help displays command-specific help</idea>
+      <idea ac="AC #4">Test that analyze requires --bankroll argument (fails without it)</idea>
+      <idea ac="AC #4">Test that analyze accepts valid float bankroll (1000.0, 500.5)</idea>
+      <idea ac="AC #4">Test that analyze rejects zero bankroll (--bankroll 0)</idea>
+      <idea ac="AC #4">Test that analyze rejects negative bankroll (--bankroll -100)</idea>
+      <idea ac="AC #4">Test that analyze rejects non-numeric bankroll (--bankroll abc)</idea>
+      <idea ac="AC #5">Test that --config argument is optional (command runs without it)</idea>
+      <idea ac="AC #6">Test that analyze prints "Starting analysis..." message with correct bankroll</idea>
+      <idea ac="AC #7">Test that --version flag displays version and exits</idea>
+      <idea>Test that invalid command shows error and suggests --help</idea>
+      <idea>Test that app metadata (name, help) is configured correctly</idea>
+    </ideas>
+  </tests>
+</story-context>

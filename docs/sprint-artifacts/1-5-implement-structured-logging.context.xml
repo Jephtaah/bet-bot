@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>5</storyId>
+    <title>Implement Structured Logging</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24T21:45:00Z</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-5-implement-structured-logging.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>to set up logging that captures debug info for troubleshooting</iWant>
+    <soThat>I can debug API failures and data issues easily</soThat>
+    <tasks>
+- [ ] Create logging module structure (AC: #1, #2, #3)
+  - [ ] Create `/src/bet_bot/utils/` directory (if not exists)
+  - [ ] Create `/src/bet_bot/utils/__init__.py`
+  - [ ] Create `/src/bet_bot/utils/logging.py` as main logging configuration
+  - [ ] Import required modules: `logging`, `sys`, `pathlib`, `datetime`
+
+- [ ] Configure console handler (AC: #2, #4, #5)
+  - [ ] Create `StreamHandler(sys.stdout)` for console output
+  - [ ] Use rich-compatible formatter with timestamps: `[%(asctime)s] %(levelname)s [%(name)s:%(lineno)d] %(message)s`
+  - [ ] Set console handler level from environment (default INFO)
+  - [ ] Configure color support (UNIX: auto-detect, Windows: check support)
+  - [ ] Test: logs appear in console with proper formatting
+
+- [ ] Configure file handler (AC: #3, #4, #5)
+  - [ ] Create `~/.bet-bot/logs/` directory on first run
+  - [ ] Use `RotatingFileHandler` with daily rotation
+  - [ ] Log filename: `{YYYY-MM-DD}.log` format
+  - [ ] Implement rotation: 10MB per file, keep 5 backups
+  - [ ] Use JSON-structured log format for files: `{"timestamp":"...", "level":"...", "logger":"...", "message":"..."}`
+  - [ ] Set file handler level to DEBUG (always capture full detail)
+  - [ ] Test: log file created and entries written
+
+- [ ] Implement log level configuration (AC: #6)
+  - [ ] Create `setup_logging(level: str = "INFO")` function
+  - [ ] Read `LOG_LEVEL` from environment variable (config module)
+  - [ ] Validate level is one of: DEBUG, INFO, WARNING, ERROR
+  - [ ] Default to INFO if missing or invalid
+  - [ ] Apply level to root logger and console handler
+  - [ ] Test: Setting `LOG_LEVEL=DEBUG` shows debug logs
+
+- [ ] Suppress noisy library logs (AC: #1)
+  - [ ] Set `httpx` logger to WARNING level (suppress connection debug spam)
+  - [ ] Set `httpcore` logger to WARNING level
+  - [ ] Set `openai` logger to INFO level
+  - [ ] Document which libraries are suppressed and why
+
+- [ ] Implement API key masking (AC: #7)
+  - [ ] Create `mask_value(value: str, length: int = 8)` utility function
+  - [ ] Mask pattern: show first 4 chars + "..." + last 4 chars
+  - [ ] Return "****" if value too short
+  - [ ] Use in logs when debugging config: `api_key={Config.get_masked_key(...)}`
+  - [ ] Test: Logs never show full API keys
+
+- [ ] Create logger factory function (AC: #1)
+  - [ ] Create `get_logger(name: str)` function
+  - [ ] Returns `logging.getLogger(name)` - standard pattern
+  - [ ] Document usage: `logger = get_logger(__name__)`
+  - [ ] Export from `__init__.py` for easy import
+
+- [ ] Integration with config module (AC: #6)
+  - [ ] Import logging in `config/__init__.py` after Config loaded
+  - [ ] Call `setup_logging(config.log_level)` at module import
+  - [ ] Document in config.py docstring that logging is auto-initialized
+  - [ ] Test: `from bet_bot.config import config` initializes logging
+
+- [ ] Integration with CLI (AC: all)
+  - [ ] Import logging in `/src/bet_bot/cli/main.py`
+  - [ ] Call `setup_logging()` before parsing CLI arguments
+  - [ ] Log CLI startup: "Starting bet-bot {version}"
+  - [ ] Log selected options on verbose mode
+  - [ ] Test: `bet-bot analyze --bankroll 1000` logs startup info
+
+- [ ] Create `.bet-bot/logs` directory manager (AC: #3)
+  - [ ] Create `ensure_log_directory()` function in logging.py
+  - [ ] Creates `~/.bet-bot/logs/` if missing
+  - [ ] Handles permission errors gracefully (warn, don't crash)
+  - [ ] Document fallback behavior (use temp directory if permission denied)
+
+- [ ] Documentation and validation (AC: all)
+  - [ ] Add docstrings to all logging functions
+  - [ ] Document log format (console vs file)
+  - [ ] Document how to configure log level
+  - [ ] Add example: "How to debug a failing API call with logs"
+  - [ ] Test: All logging flows work as expected
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. Create logger configuration in `/src/bet_bot/utils/logging.py`
+2. Log to console (colored output via `rich`)
+3. Log to file: `~/.bet-bot/logs/{date}.log` (user home directory)
+4. Log levels: DEBUG, INFO, WARNING, ERROR
+5. Include timestamps, log level, module name in each log
+6. Respect `LOG_LEVEL` environment variable
+7. Never expose API keys in logs
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>Logging Configuration</section>
+        <snippet>Logging Setup with console handler (human-readable), file handler (structured JSON), and suppressed loggers (httpx, httpcore, openai). File rotation: 10MB per file, keep 5 backups.</snippet>
+      </doc>
+      <doc>
+        <path>docs/development-stories.md</path>
+        <title>Development Stories</title>
+        <section>Story 1.5: Implement Structured Logging</section>
+        <snippet>Logging system must capture DEBUG, INFO, WARNING, ERROR level logs, write to console (colored output) and file with rotation (daily, max 10MB), include timestamps and source context, respect LOG_LEVEL environment variable, and never leak API keys.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Standards - Logging Configuration</title>
+        <section>Logging Configuration - MANDATORY STANDARD</section>
+        <snippet>ALWAYS use structured logging (JSON format for files), ALWAYS log to file AND console, ALWAYS include context (timestamps, levels, module), NEVER use print() for logging, ALWAYS rotate log files (10MB max, 5 backup), ALWAYS suppress noisy libraries.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/1-4-set-up-configuration-management.md</path>
+        <title>Story 1.4 - Configuration Management</title>
+        <section>Config Pattern and Logging Integration</section>
+        <snippet>Config class uses Pydantic, singleton instance exported from config/__init__.py, environment variables loaded via python-dotenv. Logging integration point: call setup_logging(config.log_level) after Config loaded.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>src/bet_bot/config/__init__.py</path>
+        <kind>module</kind>
+        <symbol>config instance</symbol>
+        <reason>Integration point - logging will be auto-initialized after Config loaded. Current implementation provides Config singleton and log_level configuration.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/config/settings.py</path>
+        <kind>module</kind>
+        <symbol>Config class</symbol>
+        <lines>TBD</lines>
+        <reason>Reference pattern for Pydantic model structure. Contains log_level field and get_masked_key() method used by logging.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/cli/main.py</path>
+        <kind>module</kind>
+        <symbol>main, app</symbol>
+        <reason>Integration point - setup_logging() should be called before CLI argument parsing to ensure logs capture startup sequence.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/utils</path>
+        <kind>directory</kind>
+        <symbol>utils package</symbol>
+        <reason>Target location for new logging.py module. Directory already exists. Will contain get_logger factory and setup_logging configuration.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="logging" version="built-in">Standard library - core logging infrastructure</package>
+        <package name="pathlib" version="built-in">File path manipulation for log directory creation</package>
+        <package name="datetime" version="built-in">Timestamp generation and log file naming</package>
+        <package name="logging.handlers" version="built-in">RotatingFileHandler for log rotation</package>
+        <package name="sys" version="built-in">stdout stream for console output</package>
+        <package name="rich" version=">=13.0.0">For colored console output and rich formatting - ALREADY INSTALLED</package>
+        <package name="pydantic" version=">=2.0.0">Already used in Config module for validation - ALREADY INSTALLED</package>
+        <package name="python-dotenv" version=">=1.0.0">Already used for environment variable loading - ALREADY INSTALLED</package>
+      </python>
+      <dev>
+        <package name="pytest" version=">=7.0.0">Testing framework - ALREADY INSTALLED</package>
+        <package name="pytest-cov" version=">=4.0.0">Code coverage reporting - configured for 80% minimum - ALREADY INSTALLED</package>
+      </dev>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <category>Framework Pattern</category>
+      <rule>Use Pydantic models from bet_bot.config for validation patterns</rule>
+      <source>Story 1.4 - Configuration Management</source>
+    </constraint>
+    <constraint>
+      <category>Security</category>
+      <rule>NEVER expose API keys in logs - use Config.get_masked_key() for debug output</rule>
+      <source>CLAUDE.md - Security Standards</source>
+    </constraint>
+    <constraint>
+      <category>API Design</category>
+      <rule>Export get_logger and setup_logging from bet_bot.utils.__init__ for easy module-level import</rule>
+      <source>Standard logger factory pattern</source>
+    </constraint>
+    <constraint>
+      <category>File Handling</category>
+      <rule>Handle missing ~/.bet-bot/logs directory gracefully - create on first run, fallback to temp if permission denied</rule>
+      <source>Story AC #3 and Dev Notes</source>
+    </constraint>
+    <constraint>
+      <category>Library Suppression</category>
+      <rule>Suppress httpx and httpcore loggers to WARNING to reduce connection spam; keep openai at INFO</rule>
+      <source>CLAUDE.md - Logging Configuration</source>
+    </constraint>
+    <constraint>
+      <category>Log Format</category>
+      <rule>Console: human-readable with timestamps and colors. File: JSON-structured for parsing/analysis</rule>
+      <source>Technical Spec - Logging Configuration</source>
+    </constraint>
+    <constraint>
+      <category>Environment Variables</category>
+      <rule>Respect LOG_LEVEL environment variable with validation (DEBUG, INFO, WARNING, ERROR)</rule>
+      <source>Story AC #6</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>setup_logging</name>
+      <kind>function signature</kind>
+      <signature>def setup_logging(level: str = "INFO") -> None</signature>
+      <path>src/bet_bot/utils/logging.py</path>
+      <description>Initialize logging system with console and file handlers</description>
+    </interface>
+    <interface>
+      <name>get_logger</name>
+      <kind>function signature</kind>
+      <signature>def get_logger(name: str) -> logging.Logger</signature>
+      <path>src/bet_bot/utils/logging.py</path>
+      <description>Factory function to create logger instances with module name</description>
+    </interface>
+    <interface>
+      <name>ensure_log_directory</name>
+      <kind>function signature</kind>
+      <signature>def ensure_log_directory() -> Path</signature>
+      <path>src/bet_bot/utils/logging.py</path>
+      <description>Create and return ~/.bet-bot/logs directory with error handling</description>
+    </interface>
+    <interface>
+      <name>mask_value</name>
+      <kind>function signature</kind>
+      <signature>def mask_value(value: str, length: int = 8) -> str</signature>
+      <path>src/bet_bot/utils/logging.py</path>
+      <description>Mask sensitive values for safe logging output</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Unit tests use pytest framework (configured in pytest.ini with 80% coverage requirement). Test structure follows the Arrange-Act-Assert pattern with monkeypatch for environment isolation. Classes are organized by functional areas (TestSetupLogging, TestGetLogger, TestConsoleHandler, TestFileHandler, TestLogLevels, TestMasking, TestDirectoryHandling, TestIntegration). Both unit tests (tests/unit/test_logging.py) and integration tests (tests/integration/test_logging_integration.py) should verify logging subsystem. Mark unit tests with @pytest.mark.unit and integration tests with @pytest.mark.integration per pytest.ini configuration.
+    </standards>
+
+    <locations>
+      <location>tests/unit/test_logging.py (NEW) - Unit tests for logging module functions and handlers</location>
+      <location>tests/integration/test_logging_integration.py (NEW) - Integration with config module and CLI</location>
+      <location>tests/ root - Reference existing test patterns in test_config.py and test_cli.py</location>
+    </locations>
+
+    <ideas>
+      <idea acRef="1">Test logger factory: get_logger("module.name") returns logging.Logger with correct module name propagation</idea>
+      <idea acRef="1">Test repeated calls: get_logger("same.name") returns same logger instance for idempotency</idea>
+      <idea acRef="2,4,5">Test console handler creation: setup_logging() creates StreamHandler targeting sys.stdout</idea>
+      <idea acRef="2,4,5">Test console formatter: logs appear with [YYYY-MM-DD HH:MM:SS] LEVEL [module:line] format on console</idea>
+      <idea acRef="3,4,5">Test file handler creation: setup_logging() creates RotatingFileHandler for ~/.bet-bot/logs/{date}.log</idea>
+      <idea acRef="3,4,5">Test file formatter: log file contains JSON-structured lines parseable with json.loads()</idea>
+      <idea acRef="3,4,5">Test rotation configuration: RotatingFileHandler maxBytes=10MB, backupCount=5 per AC specs</idea>
+      <idea acRef="4,6">Test log levels: setup_logging("DEBUG") sets root logger and console to DEBUG level</idea>
+      <idea acRef="4,6">Test log level filter: DEBUG logs only show with LOG_LEVEL=DEBUG in config</idea>
+      <idea acRef="4,6">Test default level: setup_logging() defaults to INFO level when no argument provided</idea>
+      <idea acRef="6">Test environment variable: LOG_LEVEL=WARNING from Config suppresses INFO/DEBUG in console (not in file)</idea>
+      <idea acRef="6">Test invalid level: Config.validate_log_level() in settings.py rejects invalid log levels</idea>
+      <idea acRef="1">Test library suppression: setup_logging() sets httpx logger to WARNING, httpcore to WARNING, openai to INFO</idea>
+      <idea acRef="7">Test API key masking: Sensitive values masked with first-4 + ... + last-4 pattern (use Config.get_masked_key())</idea>
+      <idea acRef="7">Test no key exposure: logger.debug() with API keys uses masked version, never shows full key</idea>
+      <idea acRef="3">Test directory creation: ensure_log_directory() creates ~/.bet-bot/logs if missing</idea>
+      <idea acRef="3">Test directory exists: ensure_log_directory() returns existing path if ~/. bet-bot/logs already exists</idea>
+      <idea acRef="3">Test permission handling: ensure_log_directory() gracefully handles permission errors (log warning, fallback to tempdir)</idea>
+      <idea acRef="1,5">Test module imports: from bet_bot.utils import get_logger, setup_logging succeeds with correct exports in __init__.py</idea>
+      <idea acRef="1">Test integration with config: Importing from bet_bot.config auto-initializes logging via setup_logging(config.log_level)</idea>
+      <idea acRef="all">Test CLI integration: python -m bet_bot.cli analyze --bankroll 1000 logs startup without exposing secrets in output</idea>
+      <idea acRef="all">Test multiple handlers: Both console and file handlers receive logs in same call (verify isolation)</idea>
+      <idea acRef="all">Fixture: Create tmpdir fixture for log directory testing (use pytest tmp_path)</idea>
+    </ideas>
+  </tests>
+</story-context>
