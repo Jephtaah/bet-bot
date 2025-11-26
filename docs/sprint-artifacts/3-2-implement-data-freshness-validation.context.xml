@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="bet-bot/story-context/3-2-data-freshness-validation" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>2</storyId>
+    <title>Implement Data Freshness Validation</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-2-implement-data-freshness-validation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>As a developer</asA>
+    <iWant>to validate that all data meets freshness requirements</iWant>
+    <soThat>analysis isn't based on stale information</soThat>
+    <tasks>
+      <task id="1" name="Review data freshness requirements and models">
+        <subtask>Load consolidator.py to understand source_lineage structure</subtask>
+        <subtask>Check timestamp fields available on consolidated fixtures</subtask>
+        <subtask>Review Story 3.1 for source tracking implementation</subtask>
+        <subtask>Document freshness thresholds: odds=1h, form=24h, injuries=12h, fixtures=±24h</subtask>
+      </task>
+      <task id="2" name="Create ValidationResult Pydantic model">
+        <subtask>Create ValidationResult model with status enum (PASS/DEGRADATION/CRITICAL)</subtask>
+        <subtask>Add timestamp, detailed status per data type, source information</subtask>
+      </task>
+      <task id="3" name="Create validator module structure">
+        <subtask>Create /src/bet_bot/data/consolidation/validator.py</subtask>
+        <subtask>Export validate_fixtures() function</subtask>
+        <subtask>Import required modules: datetime, timezone, logging</subtask>
+      </task>
+      <task id="4-8" name="Implement validation functions">
+        <subtask>Fixture date validation (_validate_fixture_date)</subtask>
+        <subtask>Odds freshness validation (_validate_odds_freshness)</subtask>
+        <subtask>Form freshness validation (_validate_form_freshness)</subtask>
+        <subtask>Injuries freshness validation (_validate_injuries_freshness)</subtask>
+        <subtask>H2H validation (_validate_h2h)</subtask>
+      </task>
+      <task id="9" name="Implement fixture validation orchestration">
+        <subtask>Function: async def validate_fixtures(consolidated_fixtures: list[Fixture]) -> list[Fixture]</subtask>
+        <subtask>Attach validation_result to fixture object</subtask>
+        <subtask>Return all fixtures with validation attached</subtask>
+      </task>
+      <task id="10" name="Implement validation status aggregation">
+        <subtask>Determine overall fixture status: CRITICAL any component → overall CRITICAL</subtask>
+        <subtask>DEGRADATION one+ → overall DEGRADATION; PASS all → overall PASS</subtask>
+        <subtask>Generate clear reason field explaining problems</subtask>
+      </task>
+      <task id="11" name="Implement logging and reporting">
+        <subtask>Log PASS fixtures at INFO level</subtask>
+        <subtask>Log DEGRADATION fixtures at WARNING level</subtask>
+        <subtask>Log CRITICAL fixtures at ERROR level</subtask>
+        <subtask>Log summary: X fixtures validated, Y passed, Z degraded, W critical</subtask>
+      </task>
+      <task id="12" name="Implement edge case handling">
+        <subtask>Handle timestamp None/null → CRITICAL</subtask>
+        <subtask>Handle future timestamps → CRITICAL</subtask>
+        <subtask>Handle very old timestamps → CRITICAL</subtask>
+        <subtask>Handle timezone issues: normalize and compare safely</subtask>
+      </task>
+      <task id="13" name="Create validation integration function">
+        <subtask>Implement validate_and_filter() function</subtask>
+        <subtask>Accept consolidated fixtures from Story 3.1</subtask>
+        <subtask>Document which downstream stages accept DEGRADATION vs require CRITICAL rejection</subtask>
+      </task>
+      <task id="14" name="Write comprehensive unit tests">
+        <subtask>Create /tests/unit/test_validator.py</subtask>
+        <subtask>Test fixture date validation (fresh, old, future, missing)</subtask>
+        <subtask>Test odds/form/injuries freshness (within threshold, stale, missing)</subtask>
+        <subtask>Test overall validation aggregation</subtask>
+        <subtask>Target 85%+ code coverage</subtask>
+      </task>
+      <task id="15" name="Integration with consolidation pipeline">
+        <subtask>Import validator into consolidation module</subtask>
+        <subtask>Call validator after consolidate_fixtures() returns</subtask>
+        <subtask>Ensure consolidated fixtures have all timestamp fields needed</subtask>
+        <subtask>Verify no data loss (validation only adds metadata)</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Create `/src/bet_bot/data/consolidation/validator.py`</criterion>
+    <criterion id="2">Implement freshness checks for fixtures (±24h), odds (&lt;1h), form (&lt;24h), injuries (&lt;12h)</criterion>
+    <criterion id="3">Flag violations as CRITICAL (reject fixture) or DEGRADATION (accept but lower confidence)</criterion>
+    <criterion id="4">Return validation results per fixture with clear status codes</criterion>
+    <criterion id="5">Log all validation results at appropriate levels (INFO/WARNING/ERROR)</criterion>
+    <criterion id="6">Create Pydantic model for validation results including reason/explanation</criterion>
+    <criterion id="7">Integrate with consolidation pipeline (validator receives consolidated fixtures)</criterion>
+    <criterion id="8">Handle edge case: missing timestamps - treat as critical failure</criterion>
+    <criterion id="9">Handle edge case: future dates - treat as critical failure</criterion>
+    <criterion id="10">Return list of fixtures with validation status attached</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification - Data Consolidation Layer</title>
+        <section>2. Data Consolidation Layer</section>
+        <snippet>Data Quality Rules: Reject odds &gt; 1 hour stale, Reject injuries &gt; 12 hours stale, Accept form data up to 24 hours old, Head-to-head is static (no freshness check)</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary - Freshness Requirements</title>
+        <section>Section 2: Team Form Data, Section 3: Injury Data, Section 5: Odds Data</section>
+        <snippet>Fixtures: Must be today (±24h). Odds: Must be &lt; 1 hour old, &lt;1h freshness. Form: Must be &lt; 24 hours old. Injuries: Must be &lt; 12 hours old, &lt;12h freshness.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/3-1-create-data-consolidation-pipeline.md</path>
+        <title>Story 3.1 - Data Consolidation Pipeline</title>
+        <section>Dev Notes - Timestamp Locations</section>
+        <snippet>fixture_date: directly on Fixture object (from API-Football). Timestamps in source_lineage dict: form_data_timestamp, injuries_timestamp, odds_timestamp. Need to verify exact field names from Story 3.1 implementation</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>src/bet_bot/data/consolidation/consolidator.py</path>
+        <kind>module</kind>
+        <symbol>consolidate_fixtures</symbol>
+        <lines>38-143</lines>
+        <reason>Main consolidation orchestration function that calls _consolidate_single_fixture for each fixture. Validator will receive the output Fixture objects and attach validation metadata</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>model</kind>
+        <symbol>Fixture</symbol>
+        <lines>172-289</lines>
+        <reason>Core Fixture model that validator will attach ValidationResult to. Contains fixture_id, kickoff_time, home_team, away_team, league, odds, head_to_head_history fields needed for freshness validation</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>model</kind>
+        <symbol>Team</symbol>
+        <lines>89-170</lines>
+        <reason>Team model contains id, name, form_5_games fields. Validator may need to reference team structure for logging and error messages</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>module</kind>
+        <symbol>DataValidationError</symbol>
+        <reason>Standard exception hierarchy for data validation errors. Should be used for validation failures per CLAUDE.md error handling patterns</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pydantic" version="2.0+">For ValidationResult model definition</package>
+        <package name="asyncio" version="builtin">For async def validate_fixtures() function</package>
+        <package name="logging" version="builtin">For structured logging of validation results</package>
+        <package name="datetime" version="builtin">For timestamp comparisons using timezone.utc</package>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <interfaces>
+    <interface>
+      <name>validate_fixtures</name>
+      <kind>async function</kind>
+      <signature>async def validate_fixtures(consolidated_fixtures: list[Fixture]) -> list[Fixture]</signature>
+      <path>src/bet_bot/data/consolidation/validator.py</path>
+      <description>Main entry point for fixture validation. Accepts consolidated fixtures from Story 3.1, validates all timestamp fields, and returns same fixtures with ValidationResult attached</description>
+    </interface>
+    <interface>
+      <name>ValidationResult</name>
+      <kind>Pydantic model</kind>
+      <signature>class ValidationResult(BaseModel): status (enum), reason (str), fixture_valid (bool), odds_status (str), form_status (str), injuries_status (str), h2h_status (str), data_freshness_score (int 0-100), timestamp (datetime)</signature>
+      <path>src/bet_bot/data/consolidation/validator.py</path>
+      <description>Data model for validation results. Should be serializable for logging and storage. Tracks which data types passed/failed validation</description>
+    </interface>
+  </interfaces>
+
+  <constraints>
+    <constraint>
+      <source>CLAUDE.md - PYTHON API CLIENT IMPLEMENTATION</source>
+      <rule>NEVER use datetime.utcnow() - use datetime.now(timezone.utc) for Python 3.14+ compatibility. All timestamp comparisons must use UTC timezone-aware datetimes</rule>
+    </constraint>
+    <constraint>
+      <source>CLAUDE.md - Error Handling - MANDATORY PATTERNS</source>
+      <rule>ALWAYS define custom exceptions in exceptions.py. NEVER use bare except clauses. ALWAYS log exceptions with context including url, status, response body where applicable</rule>
+    </constraint>
+    <constraint>
+      <source>technical-spec.md - Data Quality Rules</source>
+      <rule>Fixtures must be today (±24h). Odds must be &lt; 1 hour old (REJECT if stale). Injuries must be &lt; 12 hours old (accept with degradation). Form must be &lt; 24 hours old (accept with degradation)</rule>
+    </constraint>
+    <constraint>
+      <source>consolidator.py - Design Pattern</source>
+      <rule>Non-invasive validation: Add metadata to fixtures without modifying data. Permissive approach: Accept DEGRADATION status, let downstream decide filtering. Observable: All validation reasons logged for debugging</rule>
+    </constraint>
+    <constraint>
+      <source>CLAUDE.md - Async/Await Patterns</source>
+      <rule>ALWAYS use asyncio.gather for parallel operations. ALWAYS use async context managers. NEVER block event loop with time.sleep() - use asyncio.sleep. ALWAYS handle asyncio.CancelledError explicitly</rule>
+    </constraint>
+    <constraint>
+      <source>story-context workflow</source>
+      <rule>Validator module should not have circular imports with consolidator.py. Helper functions prefixed with _ (not exported). ValidationResult should be separate from Fixture model</rule>
+    </constraint>
+  </constraints>
+
+  <tests>
+    <standards>
+      Unit testing framework: pytest. Test fixtures should mock Fixture objects with various timestamp scenarios (fresh, stale, missing, future). Test validation logic for each data type independently, then aggregation logic. Use parametrized tests for multiple scenarios (e.g., odds age 10min, 30min, 90min). All validation edge cases covered: missing timestamps, future dates, timezone issues. Logging assertions to verify correct log levels (INFO for PASS, WARNING for DEGRADATION, ERROR for CRITICAL). Target 85%+ code coverage for validator.py module.
+    </standards>
+    <locations>
+      <location>/tests/unit/test_validator.py</location>
+    </locations>
+    <ideas>
+      <idea acId="2,4,5">Test fixture date validation: fresh fixture (today) → PASS, old fixture (1 day old) → PASS, very old (2 days) → CRITICAL, future fixture (1 day future) → PASS, far future (2 days) → CRITICAL, missing fixture_date → CRITICAL</idea>
+      <idea acId="2,4,5">Test odds freshness: fresh odds (10 min old) → PASS, stale odds (90 min old) → DEGRADATION, very stale (5h) → DEGRADATION, missing odds_timestamp → CRITICAL</idea>
+      <idea acId="2,4,5">Test form freshness: fresh (1h old) → PASS, old (20h old) → PASS, very old (48h) → DEGRADATION, missing form_timestamp → DEGRADATION</idea>
+      <idea acId="2,4,5">Test injuries freshness: fresh (1h old) → PASS, old (8h old) → PASS, very old (18h) → DEGRADATION, missing injuries_timestamp → DEGRADATION</idea>
+      <idea acId="3,4,10">Test overall validation aggregation: all data fresh → PASS, odds stale + form fresh → DEGRADATION, fixture date in future → CRITICAL, multiple degradations → DEGRADATION</idea>
+      <idea acId="5,11">Test validation summary logging: verify log output format for each status (INFO, WARNING, ERROR), verify fixture summary message format</idea>
+      <idea acId="8,9,12">Test edge cases: timestamp is None → CRITICAL, timestamp in future → CRITICAL, timestamp very old (10 years) → CRITICAL, timezone naive vs aware handling</idea>
+    </ideas>
+  </tests>
+
+</story-context>

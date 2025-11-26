@@ -51,7 +51,7 @@ development_status:
   # PHASE 3: Data Consolidation & Validation
   phase-3: backlog
   3-1-create-data-consolidation-pipeline: done
-  3-2-implement-data-freshness-validation: backlog
+  3-2-implement-data-freshness-validation: ready-for-dev
   3-3-create-data-quality-scoring: backlog
   phase-3-retrospective: optional
 
