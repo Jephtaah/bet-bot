@@ -1200,6 +1200,397 @@ data = pickle.loads(untrusted_data)  # FORBIDDEN - CODE INJECTION RISK
 
 ---
 
+## PYTHON 3.14+ DEPRECATION AVOIDANCE
+
+**Project Target**: Python 3.14+ compatibility (ZERO deprecation warnings)
+
+### 1. Datetime Handling - CRITICAL CHANGES
+
+**CRITICAL (ZERO TOLERANCE)**:
+- NEVER use `datetime.utcnow()` - DEPRECATED in 3.12, REMOVED in 3.14
+- NEVER use `datetime.now()` without timezone for UTC
+- ALWAYS use `datetime.now(timezone.utc)` for UTC time
+- ALWAYS include `timezone.utc` when working with UTC
+- NEVER use naive datetimes for comparisons with aware datetimes
+
+**DEPRECATED (Python 3.12+)**:
+```python
+# FORBIDDEN - REMOVED in Python 3.14
+from datetime import datetime
+utc_now = datetime.utcnow()  # ❌ DEPRECATED
+
+# WRONG - Naive datetime
+now = datetime.now()  # ❌ WRONG - no timezone info
+```
+
+**CORRECT (Python 3.14+)**:
+```python
+from datetime import datetime, timezone
+
+# Always use timezone-aware UTC
+utc_now = datetime.now(timezone.utc)  # ✓ CORRECT
+
+# For comparisons
+age = datetime.now(timezone.utc) - some_datetime  # ✓ CORRECT
+
+# Safe timezone handling
+timestamp = datetime.fromisoformat(iso_string)  # ✓ Returns aware datetime
+if timestamp.tzinfo is None:
+    timestamp = timestamp.replace(tzinfo=timezone.utc)  # Make aware if naive
+```
+
+**Code Pattern Migration**:
+```python
+# OLD (Python 3.10-3.12)
+from datetime import datetime
+delta = datetime.utcnow() - some_datetime
+
+# NEW (Python 3.13+)
+from datetime import datetime, timezone
+delta = datetime.now(timezone.utc) - some_datetime.replace(tzinfo=timezone.utc)
+```
+
+---
+
+### 2. Type Hints - MODERN SYNTAX ONLY
+
+**CRITICAL (ZERO TOLERANCE)**:
+- ALWAYS use `dict[str, str]` NOT `Dict[str, str]` (PEP 585)
+- ALWAYS use `list[X]` NOT `List[X]` (PEP 585)
+- ALWAYS use `tuple[X, ...]` NOT `Tuple[X, ...]` (PEP 585)
+- ALWAYS use `X | None` NOT `Optional[X]` (PEP 604)
+- ALWAYS use `X | Y` NOT `Union[X, Y]` (PEP 604)
+- NEVER import from `typing` for built-in types (dict, list, tuple, set, frozenset)
+- ONLY import from `typing` for: `Any`, `TypeVar`, `Generic`, `Protocol`, `Callable`
+
+**DEPRECATED (Python 3.9-3.13)**:
+```python
+from typing import Dict, List, Optional, Union
+
+# FORBIDDEN - old style type hints
+def process(data: Dict[str, str]) -> List[int]:
+    items: Optional[str] = None
+    value: Union[str, int] = "test"
+```
+
+**CORRECT (Python 3.14+)**:
+```python
+# NO imports needed for built-in types
+def process(data: dict[str, str]) -> list[int]:
+    items: str | None = None
+    value: str | int = "test"
+
+# Modern imports (only when needed)
+from typing import Any, TypeVar, Callable
+
+T = TypeVar("T")
+
+def generic_func(callback: Callable[[str], Any]) -> T:
+    pass
+```
+
+**Type Hints Pattern Guide**:
+```python
+from typing import Any, Callable, TypeVar
+from collections.abc import Sequence, Mapping, Iterator
+
+# ✓ CORRECT - Use built-in generics
+def fetch_data(
+    urls: list[str],
+    params: dict[str, str | int],
+    timeout: int | None = None
+) -> dict[str, Any]:
+    pass
+
+# ✓ CORRECT - Use collections.abc for abstract types
+def process_items(items: Sequence[str]) -> Iterator[str]:
+    pass
+
+# ✓ CORRECT - Union syntax for multiple types
+def parse_value(value: str | int | float) -> str:
+    return str(value)
+
+# ✓ CORRECT - Callable for functions
+def apply_operation(
+    values: list[int],
+    operation: Callable[[int], int]
+) -> list[int]:
+    return [operation(v) for v in values]
+```
+
+---
+
+### 3. String Formatting - CONSISTENT STYLE
+
+**CRITICAL (ZERO TOLERANCE)**:
+- ALWAYS use f-strings (NOT % formatting or .format())
+- ALWAYS use raw f-strings for regex patterns: `rf"pattern"`
+- NEVER use implicit string concatenation across lines without backslash
+- ALWAYS use explicit line continuation
+
+**DEPRECATED (Pre-Python 3.6)**:
+```python
+# FORBIDDEN - old string formatting
+msg = "Error: %s code: %d" % (error, code)  # ❌
+msg = "Error: {} code: {}".format(error, code)  # ❌
+```
+
+**CORRECT (Python 3.6+)**:
+```python
+# ✓ CORRECT - f-strings
+msg = f"Error: {error} code: {code}"
+
+# ✓ CORRECT - regex with raw f-strings
+pattern = rf"^{team_name}\s+\d+"
+
+# ✓ CORRECT - multi-line strings with f-strings
+error_msg = (
+    f"Failed to fetch data for {fixture_id}. "
+    f"Status: {status_code}. "
+    f"Body: {response_body[:200]}"
+)
+```
+
+---
+
+### 4. Async/Await - STRICT PATTERNS
+
+**CRITICAL (ZERO TOLERANCE)**:
+- ALWAYS use `asyncio.Runner()` for top-level async in Python 3.11+ (replaces `asyncio.run()`)
+- ALWAYS use `async with` for context managers (NOT `await`)
+- NEVER use `asyncio.get_event_loop().run_until_complete()`
+- ALWAYS handle `asyncio.CancelledError` explicitly
+- NEVER use `loop.run_forever()` in new code
+
+**DEPRECATED (Python 3.10+)**:
+```python
+# CONDITIONAL - asyncio.run() still works but avoid
+import asyncio
+asyncio.run(main())  # Works but deprecated pattern
+```
+
+**CORRECT (Python 3.11+)**:
+```python
+import asyncio
+
+async def main():
+    await fetch_data()
+
+# ✓ Modern style (Python 3.11+)
+if __name__ == "__main__":
+    with asyncio.Runner() as runner:
+        runner.run(main())
+
+# Fallback for older Python 3.10
+# (keep for compatibility, but mark for removal when 3.14 becomes baseline)
+try:
+    asyncio.run(main())
+except AttributeError:
+    # Python 3.10 fallback
+    asyncio.get_event_loop().run_until_complete(main())
+```
+
+**Async Context Managers**:
+```python
+# ✓ CORRECT - async with for async context managers
+async with httpx.AsyncClient() as client:
+    response = await client.get(url)
+
+# ❌ FORBIDDEN - don't await context managers
+# await httpx.AsyncClient()  # WRONG
+```
+
+---
+
+### 5. Pydantic - V2 SYNTAX ONLY
+
+**CRITICAL (ZERO TOLERANCE)**:
+- ALWAYS use Pydantic v2 syntax (NOT v1)
+- NEVER use `@validator` decorator (use `field_validator` in v2)
+- NEVER use `@root_validator` (use `model_validator` in v2)
+- ALWAYS use `ConfigDict` instead of `Config` class
+- NEVER use `allow_population_by_field_name` (use `populate_by_name` in v2)
+- ALWAYS use `field_validator` with `mode="before"` or `mode="after"`
+
+**DEPRECATED (Pydantic v1 - MUST UPGRADE)**:
+```python
+from pydantic import BaseModel, validator, root_validator
+
+class MyModel(BaseModel):
+    value: str
+
+    class Config:
+        allow_population_by_field_name = True
+
+    @validator("value")
+    def validate_value(cls, v):
+        return v.upper()
+
+    @root_validator
+    def validate_root(cls, values):
+        return values
+```
+
+**CORRECT (Pydantic v2)**:
+```python
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+
+class MyModel(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    value: str
+
+    @field_validator("value")
+    @classmethod
+    def validate_value(cls, v: str) -> str:
+        return v.upper()
+
+    @model_validator(mode="after")
+    def validate_model(self) -> "MyModel":
+        # Post-validation logic
+        return self
+```
+
+**Pydantic v2 Pattern for Nested Fields**:
+```python
+from pydantic import BaseModel, Field
+
+class Team(BaseModel):
+    team_id: str = Field(..., alias="id")
+    team_name: str = Field(..., alias="name")
+
+class Fixture(BaseModel):
+    fixture_id: str = Field(..., alias="fixture.id")
+    home_team: Team = Field(..., alias="teams.home")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        validate_assignment=True
+    )
+```
+
+---
+
+### 6. Module Imports - AVOID DEPRECATED MODULES
+
+**CRITICAL (ZERO TOLERANCE)**:
+- NEVER import from `distutils` (REMOVED in 3.12, scheduled removal)
+- NEVER use `asyncore` or `asynchat` (REMOVED in 3.12)
+- NEVER use `smtpd` (REMOVED in 3.12)
+- NEVER use `imp` (REMOVED in 3.12)
+- ALWAYS use `importlib` for dynamic imports
+- ALWAYS use `packaging` for version comparisons (NOT home-grown code)
+
+**DEPRECATED (Removed in Python 3.12+)**:
+```python
+# FORBIDDEN - removed modules
+from distutils.version import LooseVersion  # ❌
+import smtpd  # ❌
+import imp  # ❌
+```
+
+**CORRECT (Python 3.14+)**:
+```python
+from importlib import import_module, resources
+from packaging import version
+
+# ✓ Dynamic imports
+module = import_module("module.name")
+
+# ✓ Version comparison
+v1 = version.parse("1.0.0")
+v2 = version.parse("2.0.0")
+if v1 < v2:
+    pass
+```
+
+---
+
+### 7. Regex - STRICT PATTERNS
+
+**CRITICAL (ZERO TOLERANCE)**:
+- ALWAYS use raw f-strings for regex patterns: `rf"..."`
+- NEVER use regex string without escaping special chars properly
+- ALWAYS compile regexes that are used multiple times
+- NEVER ignore `re.escape()` for user input patterns
+
+**CORRECT PATTERN**:
+```python
+import re
+
+# ✓ Compiled regex for reuse
+PATTERN = re.compile(rf"^{re.escape('team_name')}\s+(\d+)$")
+
+# ✓ Raw f-string for patterns
+def validate_id(team_name: str) -> bool:
+    pattern = rf"^{re.escape(team_name)}\s+\d+$"
+    return bool(re.match(pattern, "test"))
+```
+
+---
+
+### 8. Exception Handling - STRICT PATTERNS
+
+**CRITICAL (ZERO TOLERANCE)**:
+- NEVER use bare `except:` clause
+- NEVER use `except Exception:` as catch-all (be specific)
+- ALWAYS use exception chaining with `from e`
+- ALWAYS use modern exception groups in Python 3.11+ (ExceptionGroup)
+- NEVER swallow exceptions without logging
+
+**CORRECT PATTERN**:
+```python
+import asyncio
+
+try:
+    result = await fetch_data()
+except httpx.TimeoutException as e:
+    logger.error(f"Timeout: {str(e)}")
+    raise APIError("Request timeout") from e
+
+except asyncio.CancelledError:
+    # Always re-raise cancellation
+    logger.info("Task cancelled")
+    raise
+
+except (ValueError, KeyError) as e:
+    logger.exception("Data error")
+    return None
+```
+
+---
+
+### 9. Performance Deprecations
+
+**CRITICAL (ZERO TOLERANCE)**:
+- NEVER use direct socket programming for HTTP (use httpx)
+- NEVER use threading for I/O (use asyncio)
+- NEVER use `time.time()` for durations (use `time.monotonic()`)
+- ALWAYS use `asyncio.TaskGroup()` in Python 3.11+ (replaces manual gathering)
+
+**CORRECT PATTERN (Python 3.11+)**:
+```python
+import asyncio
+
+async def fetch_multiple():
+    async with asyncio.TaskGroup() as tg:
+        task1 = tg.create_task(fetch_data1())
+        task2 = tg.create_task(fetch_data2())
+    # Tasks complete automatically, exceptions propagated
+    return task1.result(), task2.result()
+
+# Fallback for Python 3.10
+async def fetch_multiple_legacy():
+    results = await asyncio.gather(
+        fetch_data1(),
+        fetch_data2(),
+        return_exceptions=True
+    )
+    return results
+```
+
+---
+
 ## ENFORCEMENT CHECKLIST
 
 Before committing ANY code, verify:
@@ -1208,7 +1599,7 @@ Before committing ANY code, verify:
 - [ ] Are you using httpx (NOT requests) for HTTP?
 - [ ] Are you using tenacity for retry logic?
 - [ ] Are all API keys in environment variables?
-- [ ] Are all responses validated with Pydantic?
+- [ ] Are all responses validated with Pydantic v2?
 - [ ] Are all async calls using proper error handling?
 - [ ] Are you using asyncio.gather for parallel calls?
 - [ ] Are all exceptions properly typed (not generic)?
@@ -1219,7 +1610,14 @@ Before committing ANY code, verify:
 - [ ] Are connections properly closed?
 - [ ] Is data freshness validated?
 - [ ] Are secrets never logged?
+- [ ] **NO `datetime.utcnow()` - use `datetime.now(timezone.utc)`**
+- [ ] **NO old-style type hints - use `list[X]` and `X | None`**
+- [ ] **NO `@validator` - use `@field_validator` (Pydantic v2)**
+- [ ] **NO bare except clauses - be specific with exceptions**
+- [ ] **NO deprecated modules (distutils, asyncore, imp, etc.)**
+- [ ] **Using f-strings for all string formatting**
+- [ ] **All async code uses proper context managers**
 
 ---
 
-_This document defines the ZERO-TOLERANCE rules for bet-bot Python development. Every violation must be corrected immediately. Consistency is non-negotiable._
+_This document defines the ZERO-TOLERANCE rules for bet-bot Python development. Every violation must be corrected immediately. Consistency is non-negotiable. Python 3.14+ compatibility is MANDATORY._
