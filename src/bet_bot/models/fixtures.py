@@ -23,12 +23,9 @@ Usage:
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
-
-if TYPE_CHECKING:
-    from bet_bot.models.analysis import AIAnalysis
 
 
 class League(BaseModel):
