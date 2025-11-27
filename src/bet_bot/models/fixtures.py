@@ -23,8 +23,12 @@ Usage:
 """
 
 from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
+
+if TYPE_CHECKING:
+    from bet_bot.models.analysis import AIAnalysis
 
 
 class League(BaseModel):
@@ -254,6 +258,36 @@ class Fixture(BaseModel):
         default_factory=list,
         description="List of past results between these teams (W/D/L from home perspective)",
         max_length=5
+    )
+
+    ai_analysis: Any = Field(
+        default=None,
+        description="AI analysis results from OpenAI (attached by Story 4.2). Type: AIAnalysis | None"
+    )
+
+    ev_results: Any = Field(
+        default=None,
+        description="EV calculation results from Story 5.1. Type: list[EVResult] | None"
+    )
+
+    error_message: str | None = Field(
+        default=None,
+        description="Error message if analysis failed (set by Story 4.2 on failure)"
+    )
+
+    form_last_updated: datetime | None = Field(
+        default=None,
+        description="Timestamp when team form data was last fetched (Story 2.3, 3.1). Used by Story 5.3 for confidence scoring."
+    )
+
+    injuries_last_checked: datetime | None = Field(
+        default=None,
+        description="Timestamp when injury data was last fetched (Story 2.2, 3.1). Used by Story 5.3 for confidence scoring."
+    )
+
+    odds_timestamp: datetime | None = Field(
+        default=None,
+        description="Timestamp when odds were last fetched (Story 2.4, 3.1). Used by Story 5.3 for confidence scoring."
     )
 
     @field_validator("fixture_id")

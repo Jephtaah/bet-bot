@@ -67,7 +67,7 @@ development_status:
   phase-5: backlog
   5-1-implement-expected-value-calculation: done
   5-2-create-threshold-filter-for-edge-detection: done
-  5-3-implement-confidence-scoring-logic: backlog
+  5-3-implement-confidence-scoring-logic: review
   5-4-create-edge-detection-pipeline: backlog
   phase-5-retrospective: optional
 

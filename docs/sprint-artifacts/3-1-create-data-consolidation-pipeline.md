@@ -1,6 +1,6 @@
 # Story 3.1: Create Data Consolidation Pipeline
 
-Status: review
+Status: done
 
 ## Story
 

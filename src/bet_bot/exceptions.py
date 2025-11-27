@@ -28,6 +28,8 @@ Usage:
     )
 """
 
+from typing import Any
+
 
 class BetBotError(Exception):
     """Base exception for all bet-bot errors."""
@@ -137,7 +139,7 @@ class DataValidationError(BetBotError):
         reason: Why validation failed
     """
 
-    def __init__(self, field: str, value: any, reason: str):
+    def __init__(self, field: str, value: Any, reason: str):
         """
         Initialize data validation error.
 

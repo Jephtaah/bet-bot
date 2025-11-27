@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="4-3-create-response-parser-for-ai-output" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>3</storyId>
+    <title>Create Response Parser for AI Output</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-3-create-response-parser-for-ai-output.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>As a developer</asA>
+    <iWant>Parse and validate OpenAI JSON responses for betting analysis</iWant>
+    <soThat>I can extract structured probability data for edge detection calculation</soThat>
+    <tasks>
+      - Parse OpenAI JSON response format (markets array with probabilities, reasoning, confidence)
+      - Extract probabilities for all markets (match_result, total_goals, corners, cards)
+      - Validate probability values are floats in range [0.0, 1.0]
+      - Normalize multi-outcome market probabilities to sum to 1.0
+      - Handle malformed responses gracefully (missing fields, invalid JSON, type errors)
+      - Attach parsed analysis to fixture.ai_analysis field (replace raw response)
+      - Create validated MarketAnalysis objects
+      - Implement comprehensive logging and error handling
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. Create `/src/bet_bot/analysis/ai/response_parser.py` module
+2. Parse OpenAI JSON response format (markets array with probabilities, reasoning, confidence)
+3. Extract probabilities for all markets (match_result, total_goals, corners, cards)
+4. Validate probability values are floats in range [0.0, 1.0]
+5. Normalize multi-outcome market probabilities to sum to 1.0
+6. Handle malformed responses gracefully (missing fields, invalid JSON, type errors)
+7. Attach parsed analysis to fixture.ai_analysis field (replace raw response)
+8. Create validated MarketAnalysis objects with: type, ai_probability dict, reasoning, confidence
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>OpenAI Analysis Layer (lines 133-160)</section>
+        <snippet>Prompt strategy and response format specification. Input JSON with fixture/form/injuries/odds. Output JSON with markets array containing probabilities, reasoning, confidence fields for match_result, total_goals, corners, cards markets.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary</title>
+        <section>Section 6: AI Analysis Output (lines 163-192)</section>
+        <snippet>Defines OpenAI probability estimates fields: ai_analysis_timestamp, ai_model, market-specific probabilities (match_result_home/draw/away_prob, total_goals_over_prob, etc.), reasoning strings. Validation rules require 0.0-1.0 float values.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/4-1-build-openai-prompt-builder.md</path>
+        <title>Story 4.1: Build OpenAI Prompt Builder (APPROVED)</title>
+        <section>Dev Notes - Response Format Specification (lines 206-224)</section>
+        <snippet>Expected JSON response from OpenAI: {"markets": [{"type": "match_result", "probabilities": {"home": 0.55, "draw": 0.25, "away": 0.20}, "reasoning": "...", "confidence": 0.85}]}. Parser must handle this exact structure and validate all fields.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/4-2-integrate-openai-api-client.md</path>
+        <title>Story 4.2: Integrate OpenAI API Client (DONE)</title>
+        <section>Dev Notes - Response Format and Client Output (lines 191-201)</section>
+        <snippet>Story 4.2 creates OpenAI client that receives JSON responses and attaches raw response to fixture.ai_analysis field. Story 4.3 parser receives this raw response and must parse/validate it, extracting structured MarketAnalysis objects. Error handling pattern: never crash, mark fixture with error_message if parsing completely fails.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/bet_bot/models/analysis.py</path>
+        <kind>model</kind>
+        <symbol>MarketAnalysis</symbol>
+        <reason>Core Pydantic v2 model that must be populated by parser. Has fields: market_type (str), ai_probability (float 0.0-1.0), reasoning (str), confidence (int 0-100). Parser creates instances of this model from OpenAI response.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/analysis.py</path>
+        <kind>model</kind>
+        <symbol>AIAnalysis</symbol>
+        <reason>Container model for list of MarketAnalysis objects. Parser creates AIAnalysis object with markets[] array and attaches to fixture.ai_analysis field. Has fields: fixture_id, markets (list of MarketAnalysis), analysis_timestamp, model_used.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>model</kind>
+        <symbol>Fixture</symbol>
+        <reason>Main data model that parser augments. Has ai_analysis field (AIAnalysis) and error_message field (str|None). Parser receives fixture with raw ai_analysis JSON response, parses it, and returns fixture with structured MarketAnalysis objects attached.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/client.py</path>
+        <kind>module</kind>
+        <symbol>analyze_fixture</symbol>
+        <reason>Story 4.2 module that creates raw OpenAI responses. Parser is called downstream by Story 4.4 batch analyzer to process fixture.ai_analysis responses from this function. Client returns fixture with raw JSON response; parser refines this to structured models.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/prompt_builder.py</path>
+        <kind>module</kind>
+        <symbol>export_prompt_for_api</symbol>
+        <reason>Story 4.1 upstream module. Documents expected response format that parser must handle. Response format defined in Story 4.1 is the contract parser must validate against.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>module</kind>
+        <symbol>APIError, DataValidationError</symbol>
+        <reason>Custom exception hierarchy for error handling. Parser uses these for structured error handling. APIError for API failures, DataValidationError for invalid probability values or response structure issues.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="json" version="stdlib">Core JSON parsing and error handling</package>
+        <package name="logging" version="stdlib">Structured logging with fixture_id context</package>
+        <package name="asyncio" version="stdlib">Async/await patterns for batch orchestration</package>
+        <package name="datetime" version="stdlib">Timestamp handling with timezone.utc</package>
+        <package name="pydantic" version="v2">Model validation and parsing (already in project)</package>
+      </python>
+      <frameworks>
+        <framework>Python 3.10+ async/await (asyncio)</framework>
+        <framework>Pydantic v2 for response validation</framework>
+        <framework>Custom exception hierarchy from bet_bot.exceptions</framework>
+      </frameworks>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <title>Response Format Contract (from Story 4.1)</title>
+      <description>Must handle exact JSON format from OpenAI: {"markets": [{"type": "...", "probabilities": {...}, "reasoning": "...", "confidence": number}]}. Any deviation should be handled gracefully with logging, never crash.</description>
+    </constraint>
+    <constraint>
+      <title>Probability Validation (from Data Dictionary)</title>
+      <description>All probability values must be floats in range [0.0, 1.0]. Multi-outcome markets (match_result: 3 outcomes) must sum to ~1.0 with tolerance ±0.05 for floating-point rounding. Normalize if sum deviates.</description>
+    </constraint>
+    <constraint>
+      <title>Error Handling Strategy (from CLAUDE.md)</title>
+      <description>Never raise exceptions from parse functions. Use custom exception hierarchy (APIError, DataValidationError). Return error status instead of raising. Log all errors with fixture_id for traceability. Graceful degradation: continue processing if one market fails, skip bad markets, return partial results.</description>
+    </constraint>
+    <constraint>
+      <title>Python 3.14+ Compliance (from CLAUDE.md)</title>
+      <description>Use datetime.now(timezone.utc) NOT deprecated utcnow(). Modern type hints: list[X], dict[K,V], X|None. F-strings for formatting. Pydantic v2 syntax (field_validator, ConfigDict). All functions have explicit return types including None.</description>
+    </constraint>
+    <constraint>
+      <title>Async Pattern Enforcement (from CLAUDE.md)</title>
+      <description>Mark main functions async (build_analysis_prompt pattern). Use asyncio.gather() for parallel parsing if multiple fixtures. Use asyncio.timeout() for timeout enforcement. Proper cleanup in finally blocks. Never block event loop.</description>
+    </constraint>
+    <constraint>
+      <title>Module Structure (from Story 4.3 spec)</title>
+      <description>Create response_parser.py in src/bet_bot/analysis/ai/ directory. Export public functions from __init__.py: parse_openai_response, attach_parsed_analysis_to_fixture. Use underscore prefix for internal helpers: _validate_market_probabilities, _normalize_probabilities, _parse_market, _validate_openai_response_structure, _extract_market_probabilities.</description>
+    </constraint>
+    <constraint>
+      <title>Data Flow Integration (from technical-spec)</title>
+      <description>Input: Fixture from Story 4.2 with fixture.ai_analysis = raw JSON response string. Parser must extract and validate JSON, create MarketAnalysis objects, attach to fixture. Output: Fixture with fixture.ai_analysis = AIAnalysis (structured) or fixture.error_message if parsing fails. Ready for Story 4.4 batch analyzer.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>parse_openai_response</name>
+      <kind>async function</kind>
+      <signature>async def parse_openai_response(response_json: str | dict, fixture_id: str) -> list[MarketAnalysis] | None</signature>
+      <path>src/bet_bot/analysis/ai/response_parser.py</path>
+      <description>Main entry point. Parses raw OpenAI JSON response (or dict) and validates structure. Returns list of MarketAnalysis objects or None if parsing fails completely. All errors logged with fixture_id context.</description>
+    </interface>
+    <interface>
+      <name>attach_parsed_analysis_to_fixture</name>
+      <kind>async function</kind>
+      <signature>async def attach_parsed_analysis_to_fixture(fixture: Fixture, parsed_markets: list[MarketAnalysis]) -> Fixture</signature>
+      <path>src/bet_bot/analysis/ai/response_parser.py</path>
+      <description>Attaches parsed analysis to fixture. Creates AIAnalysis object with markets list, adds metadata (analysis_timestamp, model_used), and updates fixture.ai_analysis field. Returns augmented fixture ready for Story 4.4 EV calculation.</description>
+    </interface>
+    <interface>
+      <name>parse_all_fixture_responses</name>
+      <kind>async function</kind>
+      <signature>async def parse_all_fixture_responses(fixtures: list[Fixture]) -> list[Fixture]</signature>
+      <path>src/bet_bot/analysis/ai/response_parser.py</path>
+      <description>Batch orchestrator. Iterates through fixtures, parses each response, handles individual failures gracefully. Returns all fixtures with parsed analysis (or error_message if failed). Logs progress and summary. Called by Story 4.4.</description>
+    </interface>
+    <interface>
+      <name>_validate_openai_response_structure</name>
+      <kind>internal function</kind>
+      <signature>def _validate_openai_response_structure(response: dict) -> bool</signature>
+      <path>src/bet_bot/analysis/ai/response_parser.py</path>
+      <description>Validates response has required keys: "markets" (array), each market has "type", "probabilities", "reasoning", "confidence". Returns bool. Logs validation failures at WARNING level.</description>
+    </interface>
+    <interface>
+      <name>_validate_market_probabilities</name>
+      <kind>internal function</kind>
+      <signature>def _validate_market_probabilities(market_type: str, probabilities_dict: dict) -> bool</signature>
+      <path>src/bet_bot/analysis/ai/response_parser.py</path>
+      <description>Validates all probability values are floats in [0.0, 1.0]. For multi-outcome markets (match_result), checks sum ≈ 1.0 (±0.05). Returns bool. Logs failures with market type and values.</description>
+    </interface>
+    <interface>
+      <name>_normalize_probabilities</name>
+      <kind>internal function</kind>
+      <signature>def _normalize_probabilities(market_type: str, probabilities_dict: dict) -> dict</signature>
+      <path>src/bet_bot/analysis/ai/response_parser.py</path>
+      <description>Normalizes probabilities if sum != 1.0 by dividing by sum. Handles division by zero (all zeros case). Clips out-of-range values to [0.0, 1.0]. Logs normalization at DEBUG level. Returns normalized dict.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Python testing standards per CLAUDE.md: pytest framework for unit and integration tests. Use pytest.mark.asyncio for async functions. Pydantic v2 model validation testing. Test both valid paths and error cases. Graceful degradation testing: partial failures, invalid JSON, missing fields should be handled without crashing. Error message verification. Logging validation at appropriate levels (DEBUG, INFO, WARNING, ERROR).
+    </standards>
+    <locations>
+      - /tests/unit/test_response_parser.py (NEW - unit tests for all parser functions)
+      - /tests/integration/test_prompt_to_analysis.py (EXISTING from Story 4.2 - extended to include parser testing)
+    </locations>
+    <ideas>
+      - Test JSON parsing (valid/invalid/missing "markets" key) → AC #2, #6
+      - Test probability validation (valid range [0.0-1.0], multi-outcome sum) → AC #4, #5
+      - Test probability normalization (sum < 1.0, sum > 1.0, all zeros) → AC #5
+      - Test market extraction (all market types, missing fields, defaults) → AC #3, #6
+      - Test error handling (malformed response, type errors, missing fields) → AC #6
+      - Test batch parsing (multiple fixtures, failure handling) → AC #2, #6
+      - Test edge cases (empty markets array, probability as strings, very small probabilities, confidence edge cases) → AC #4, #8
+      - Test MarketAnalysis object creation and validation → AC #8
+      - Test fixture attachment and error_message population → AC #7
+      - Target: 85%+ code coverage for response_parser.py
+    </ideas>
+  </tests>
+</story-context>

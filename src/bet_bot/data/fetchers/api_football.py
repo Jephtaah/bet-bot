@@ -25,6 +25,7 @@ import logging
 import time
 from collections import deque
 from datetime import datetime, timezone
+from typing import Any
 
 import httpx
 from pydantic import ValidationError
@@ -201,7 +202,7 @@ def get_api_headers() -> dict[str, str]:
 )
 async def fetch_with_retry(
     url: str,
-    **kwargs
+    **kwargs: Any
 ) -> httpx.Response:
     """
     Fetch URL with automatic retry logic.
@@ -409,13 +410,13 @@ async def fetch_fixtures(
                 )
 
                 # Create Fixture object
-                fixture = Fixture(
-                    fixture_id=str(fixture_data.get("id", "")),
-                    kickoff_time=fixture_data.get("date", ""),
-                    home_team=home_team,
-                    away_team=away_team,
-                    league=league
-                )
+                fixture = Fixture.model_validate({
+                    "fixture.id": str(fixture_data.get("id", "")),
+                    "fixture.date": fixture_data.get("date", ""),
+                    "home_team": home_team,
+                    "away_team": away_team,
+                    "league": league
+                })
 
                 fixtures.append(fixture)
 
@@ -625,8 +626,9 @@ async def fetch_injuries(team_id: str) -> Injury | None:
                     impact = "Moderate"
 
                 injured_player = InjuredPlayer(
+                    player_id=str(player_data.get("id", "")),
                     player_name=player_data.get("name", "Unknown"),
-                    player_position=player_data.get("position", "Unknown"),
+                    position=player_data.get("position", "Unknown"),
                     injury_status=status,
                     impact_severity=impact
                 )
@@ -649,7 +651,7 @@ async def fetch_injuries(team_id: str) -> Injury | None:
         injury = Injury(
             team_id=team_id,
             injured_players=injured_players,
-            missing_key_players_count=missing_key_count,
+            missing_key_players_count=int(missing_key_count),
             missing_key_players_list=missing_key_names
         )
 

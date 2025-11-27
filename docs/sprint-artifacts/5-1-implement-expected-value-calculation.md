@@ -1,6 +1,6 @@
 # Story 5.1: Implement Expected Value Calculation
 
-Status: review
+Status: done
 
 ## Story
 

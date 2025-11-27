@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>5</epicId>
+    <storyId>5.2</storyId>
+    <title>Create Threshold Filter for Edge Detection</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27T00:00:00Z</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/5-2-create-threshold-filter-for-edge-detection.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>filter picks that meet the 5% EV threshold</iWant>
+    <soThat>only high-value recommendations are returned to the user</soThat>
+    <tasks>
+      - Task 1: Review architecture and data contracts (AC: #1-#2)
+        * Load technical-spec.md Section 4 (Edge Detection Layer) to understand threshold filter purpose
+        * Understand that this story consumes output from Story 5.1 (EVResult objects with ev_percentage field)
+        * Understand the 5% threshold is business requirement (non-negotiable discipline)
+        * Verify Story 5.1 (ev_calculator.py) exports filter_evs_by_threshold() that can be leveraged
+
+      - Task 2: Create PickCategory enum and utility models (AC: #7)
+        * Create Pydantic enum: PickCategory with values: RECOMMENDED, MARGINAL, LOW, INVALID
+        * Create Pydantic model: FilteredPick with fields for ev_result, category, category_reason, recommended
+        * Add validation: category and recommended must be consistent
+
+      - Task 3: Implement core threshold filtering functions (AC: #2-#3, #6)
+        * Function: filter_picks_by_threshold(ev_results, threshold_pct) → separates results
+        * Function: categorize_picks(ev_results) → returns dict with RECOMMENDED/MARGINAL/LOW/INVALID
+        * Enforce that no picks below threshold are returned as main output
+
+      - Task 4: Implement validation enforcement (AC: #6, #8)
+        * Function: validate_threshold_enforcement(picks) → verifies all picks >= 5%
+        * Function: verify_no_threshold_bypass(recommended_picks, all_picks)
+        * Raise ValueError if any pick violates 5% threshold discipline
+
+      - Task 5: Implement no-picks messaging (AC: #5)
+        * Function: no_picks_available_message(ev_results, threshold_pct) → structured message
+        * Include summary of MARGINAL/LOW/INVALID counts
+        * Suggest user actions for next steps
+
+      - Task 6: Implement batch filtering (AC: #9, #10)
+        * Function: async apply_threshold_filter(fixtures, threshold_pct) → orchestrates filtering
+        * Returns dict with recommended/marginal/low/invalid categorized picks
+        * Logs filtering summary: total evaluated, breakdown by category
+
+      - Task 7: Implement integration with Story 5.1 (AC: #1-#3)
+        * Verify filter_evs_by_threshold() from Story 5.1 can be imported and used
+        * Export filter_picks_by_threshold from this module for downstream (Story 5.4)
+        * Document dependency: "Requires Story 5.1 ev_calculator.py"
+
+      - Task 8: Create unit tests (AC: #2-#10)
+        * Create /tests/unit/test_threshold_filter.py with comprehensive test cases
+        * Test filter_picks_by_threshold() with valid/invalid/boundary cases
+        * Test categorize_picks() - verify all 4 categories correct
+        * Test validate_threshold_enforcement() - discipline violation detection
+        * Test apply_threshold_filter() - batch processing
+        * Target: minimum 85% code coverage
+
+      - Task 9: Create integration test with Story 5.1 (AC: #2-#3, #9-#10)
+        * Create /tests/integration/test_threshold_filter_pipeline.py
+        * Load sample fixtures with ev_results from Story 5.1
+        * Verify RECOMMENDED picks all >= 5% EV
+        * Test "NO PICKS" scenario (all picks below threshold)
+        * Test edge case: all picks exactly at threshold (5.0%)
+
+      - Task 10: Write module documentation (AC: #1)
+        * Module docstring explaining purpose, 5% threshold, filtering categories
+        * Document all functions: parameters, return types, examples
+        * Document PickCategory enum values and usage
+        * Add examples and discipline requirement notes
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Create `/src/bet_bot/analysis/edge/threshold_filter.py` module
+    2. Implement `def filter_picks_by_threshold(ev_results: list[EVResult], threshold_pct: float = 5.0) -> tuple[list[EVResult], list[EVResult]]` function that separates EV results into recommended (≥ threshold) and marginal (&lt; threshold)
+    3. Implement `def categorize_picks(ev_results: list[EVResult]) -> dict[str, list[EVResult]]` that categorizes picks into RECOMMENDED (EV > 5%), MARGINAL (2% &lt; EV &lt; 5%), and LOW (EV &lt; 2%)
+    4. Return only RECOMMENDED picks in main output; log MARGINAL picks for user reference
+    5. Return structured "NO PICKS AVAILABLE" message when zero RECOMMENDED picks found
+    6. Never lower the 5% threshold (discipline enforcement - this is non-negotiable)
+    7. Create `PickCategory` enum to standardize pick classifications (RECOMMENDED, MARGINAL, LOW, INVALID)
+    8. Implement `def validate_threshold_enforcement(picks: list[Pick]) -> bool` to verify no picks below threshold exist in output
+    9. Implement batch processing function: `async def apply_threshold_filter(fixtures: list[Fixture], threshold_pct: float = 5.0) -> dict[str, Any]` that orchestrates filtering and returns categorized picks
+    10. Log filtering summary: total picks evaluated, breakdown by category, picks removed by threshold
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>4 - Edge Detection Layer (analysisedge)</section>
+        <snippet>The Edge Detection Layer calculates expected value and filters for picks with EV > 5%. Purpose: Calculate expected value, filter for picks. Modules: ev_calculator.py (EV = (AI_prob × odds) - 1), threshold_filter.py (Filter for EV > 5%), confidence_scorer.py (Assess data quality reliability).</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/5-1-implement-expected-value-calculation.md</path>
+        <title>Story 5.1: Implement Expected Value Calculation</title>
+        <section>Completion Status</section>
+        <snippet>Story 5.1 provides EVResult objects with ev_percentage field and already exports filter_evs_by_threshold() helper function. EVResult has is_valid boolean and skip_reason for invalid calculations. Story 5.1 is marked as "review" status (DONE).</snippet>
+      </doc>
+      <doc>
+        <path>docs/development-stories.md</path>
+        <title>bet-bot Development Stories</title>
+        <section>PHASE 5: Edge Detection & Filtering - Story 5.2</section>
+        <snippet>Filter for picks with EV > 5% (0.05). Separate into: RECOMMENDED (EV > 5%), MARGINAL (2% &lt; EV &lt; 5%), LOW (EV &lt; 2%). Return only RECOMMENDED picks in main output. Return "NO PICKS AVAILABLE" if zero RECOMMENDED picks found. Never lower threshold (discipline enforcement).</snippet>
+      </doc>
+      <doc>
+        <path>docs/requirements.md</path>
+        <title>Project Requirements</title>
+        <section>US-5: Calculate Expected Value and Detect Edge</section>
+        <snippet>Filter for picks with EV > 5% threshold. Calculate confidence score (high/medium/low) based on data quality. Return "NO PICKS AVAILABLE" when no picks meet threshold.</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary</title>
+        <section>5 - Odds Data</section>
+        <snippet>Describes all available markets for EV calculation (match_result, total_goals, corners, cards) and their odds formats. EVResult model includes market_type, outcome, odds, and probability fields.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>src/bet_bot/analysis/edge/ev_calculator.py</path>
+        <kind>service</kind>
+        <symbol>EVResult, calculate_ev, calculate_implied_probability, calculate_all_evs, filter_evs_by_threshold</symbol>
+        <lines>1-200</lines>
+        <reason>Story 5.1 (DONE) provides EVResult model and core EV calculation. This story reuses EVResult objects and the filter_evs_by_threshold() helper function from this module. Critical dependency - understand EVResult structure before implementing threshold filter.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>model</kind>
+        <symbol>Fixture, Team, League</symbol>
+        <lines>1-100</lines>
+        <reason>Core data model. Fixture contains ai_analysis (from Story 4.4) and will receive ev_results field in Story 5.1. Story 5.2 processes fixtures with populated ev_results field.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/analysis.py</path>
+        <kind>model</kind>
+        <symbol>AIAnalysis, MarketAnalysis</symbol>
+        <lines>1-80</lines>
+        <reason>Defines AI analysis structure that Fixture contains. Used to understand market types and probability fields that EV calculations depend on.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/unit/test_ev_calculator.py</path>
+        <kind>test</kind>
+        <symbol>test_*, Test*</symbol>
+        <lines>1-300</lines>
+        <reason>Story 5.1 unit tests demonstrate testing patterns for edge detection (error handling, validation, batch processing). Use as reference for Story 5.2 test structure and patterns.</reason>
+      </artifact>
+      <artifact>
+        <path>tests/integration/test_ev_calculation_pipeline.py</path>
+        <kind>test</kind>
+        <symbol>test_*, Test*</symbol>
+        <lines>1-200</lines>
+        <reason>Story 5.1 integration tests show end-to-end pipeline testing with real fixtures. Story 5.2 will integrate with these EV results. Use as template for threshold filter integration tests.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>model</kind>
+        <symbol>BetBotError, APIError, DataValidationError, DataStaleError</symbol>
+        <lines>1-50</lines>
+        <reason>Custom exception hierarchy for error handling. Story 5.2 should raise DataValidationError for threshold violations and follow existing error handling patterns.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/edge/__init__.py</path>
+        <kind>init</kind>
+        <symbol>__all__</symbol>
+        <lines>1-20</lines>
+        <reason>Module initialization. Story 5.2 exports will be added here for downstream consumption by Story 5.3 (confidence_scorer) and Story 5.4 (edge_detection_pipeline).</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pydantic" version=">=2.0">Pydantic v2 for model validation (PickCategory enum, FilteredPick model)</package>
+        <package name="typing">Built-in typing module for type hints (list, dict, Any, Callable)</package>
+        <package name="logging">Built-in logging for progress and summary logs</package>
+        <package name="asyncio">Built-in asyncio for async batch processing function</package>
+        <package name="pytest" version=">=7.0">Testing framework for unit and integration tests</package>
+      </python>
+      <internal>
+        <package name="bet_bot.analysis.edge.ev_calculator">Story 5.1 - provides EVResult model and filter_evs_by_threshold() helper</package>
+        <package name="bet_bot.models.fixtures">Fixture model with ai_analysis and odds data</package>
+        <package name="bet_bot.exceptions">BetBotError, DataValidationError for error handling</package>
+      </internal>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <name>5% Threshold Discipline</name>
+      <description>The 5% EV threshold is non-negotiable and represents the core discipline of the system. No picks below 5% EV should ever be recommended to the user in main output. This prevents emotional betting and overconfidence.</description>
+      <source>Requirements.md, Development Stories, Technical Spec</source>
+    </constraint>
+    <constraint>
+      <name>Graceful Degradation</name>
+      <description>Follow error handling patterns from Story 5.1: One EV calculation failure shouldn't block others. Use try/catch in batch processing, log and skip on failure, continue processing remaining fixtures.</description>
+      <source>Story 5.1 Dev Notes</source>
+    </constraint>
+    <constraint>
+      <name>Data Structure Convention</name>
+      <description>Always validate input before processing and return structured dict (not bare lists). Include status fields like has_picks, total_evaluated, no_picks_message in return dict.</description>
+      <source>Story 5.1 Dev Notes</source>
+    </constraint>
+    <constraint>
+      <name>Logging Standards</name>
+      <description>Use module-level logger, log at DEBUG/INFO/WARNING levels appropriately. Log progress "X of Y" during batch processing. Log filtering summary with counts and breakdown by category.</description>
+      <source>Story 5.1 Dev Notes</source>
+    </constraint>
+    <constraint>
+      <name>Pydantic v2 Only</name>
+      <description>Must use Pydantic v2 syntax: @field_validator (not @validator), ConfigDict (not Config class), populate_by_name (not allow_population_by_field_name). All models require explicit return type annotations.</description>
+      <source>CLAUDE.md Project Rules</source>
+    </constraint>
+    <constraint>
+      <name>Python 3.14+ Compatibility</name>
+      <description>Use datetime.now(timezone.utc) NOT datetime.utcnow(). Use modern type hints: list[X] not List[X], X | None not Optional[X]. All functions must have explicit return type annotations including -> None.</description>
+      <source>CLAUDE.md Project Rules</source>
+    </constraint>
+    <constraint>
+      <name>Integration with Story 5.1</name>
+      <description>Story 5.2 receives EVResult objects from Story 5.1 and can reuse filter_evs_by_threshold() helper. Output (RECOMMENDED picks) feeds into Story 5.3 (confidence_scorer) and Story 5.4 (edge_detection_pipeline).</description>
+      <source>Story 5.2 Dev Notes - Data Flow</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>filter_picks_by_threshold</name>
+      <kind>function signature</kind>
+      <signature>def filter_picks_by_threshold(ev_results: list[EVResult], threshold_pct: float = 5.0) -> tuple[list[EVResult], list[EVResult]]</signature>
+      <path>src/bet_bot/analysis/edge/threshold_filter.py</path>
+      <description>Separates EV results into recommended (≥ threshold) and marginal (&lt; threshold). Validates threshold_pct is 0.0-100.0, returns tuple (above_threshold, below_threshold).</description>
+    </interface>
+    <interface>
+      <name>categorize_picks</name>
+      <kind>function signature</kind>
+      <signature>def categorize_picks(ev_results: list[EVResult]) -> dict[str, list[EVResult]]</signature>
+      <path>src/bet_bot/analysis/edge/threshold_filter.py</path>
+      <description>Categorizes picks into RECOMMENDED (EV >= 5%), MARGINAL (2% &lt;= EV &lt; 5%), LOW (0% &lt;= EV &lt; 2%), INVALID (is_valid == False). Returns dict with category keys mapping to EVResult lists.</description>
+    </interface>
+    <interface>
+      <name>apply_threshold_filter</name>
+      <kind>async function signature</kind>
+      <signature>async def apply_threshold_filter(fixtures: list[Fixture], threshold_pct: float = 5.0) -> dict[str, Any]</signature>
+      <path>src/bet_bot/analysis/edge/threshold_filter.py</path>
+      <description>Orchestrates filtering across multiple fixtures. Returns dict with: recommended[], marginal[], low[], invalid[], total_evaluated, total_recommended, threshold_pct, has_picks, no_picks_message. Logs progress and filtering summary.</description>
+    </interface>
+    <interface>
+      <name>EVResult</name>
+      <kind>Pydantic model from Story 5.1</kind>
+      <signature>EVResult(market_type: str, outcome: str, ai_probability: float, odds: float, implied_probability: float, ev_decimal: float, ev_percentage: float, is_valid: bool, skip_reason: str | None)</signature>
+      <path>src/bet_bot/analysis/edge/ev_calculator.py</path>
+      <description>Pydantic model representing single EV calculation. Contains market_type, outcome, ai_probability, odds, implied_probability, ev_decimal, ev_percentage, is_valid flag, and skip_reason for invalid calculations.</description>
+    </interface>
+    <interface>
+      <name>Fixture</name>
+      <kind>Pydantic model (receives new field)</kind>
+      <signature>Fixture(fixture_id: str, kickoff_time: datetime, home_team: Team, away_team: Team, league: League, odds: dict, ai_analysis: AIAnalysis | None, ev_results: list[EVResult])</signature>
+      <path>src/bet_bot/models/fixtures.py</path>
+      <description>Core data model. Story 5.1 adds ev_results field (populated by calculate_all_evs). Story 5.2 processes fixtures with populated ev_results. Story 5.3+ consumes filtered results.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests follow pytest conventions with fixtures, parametrize decorators, and assertions. Use Fixture factory from Story 5.1 tests as template. Mock EVResult data for unit tests. Integration tests use real Fixture structures from Story 5.1 integration test output. Target: minimum 85% code coverage (higher than Story 5.1 to show discipline enforcement). Error handling tests verify ValueError on threshold violations and discipline breaches.
+    </standards>
+    <locations>
+      - /tests/unit/test_threshold_filter.py - Core filtering logic unit tests
+      - /tests/integration/test_threshold_filter_pipeline.py - End-to-end filtering with Story 5.1 EVResults
+      - /tests/unit/ - General location for Story 5.2 unit tests
+      - /tests/integration/ - General location for Story 5.2 integration tests
+    </locations>
+    <ideas>
+      AC#2: Test filter_picks_by_threshold with valid EV 5.8% (above) and 4.2% (below); boundary at 5.0%; invalid threshold values
+      AC#3: Test categorize_picks separates into RECOMMENDED/MARGINAL/LOW/INVALID correctly; verify all picks accounted for
+      AC#5: Test no_picks_available_message returns non-empty string with MARGINAL/LOW/INVALID counts and suggestions
+      AC#6: Test validate_threshold_enforcement raises ValueError if any pick &lt; 5%; returns True for all &gt;= 5%
+      AC#7: Test PickCategory enum has 4 values: RECOMMENDED, MARGINAL, LOW, INVALID
+      AC#8: Test verify_no_threshold_bypass detects if recommended_picks subset of all_picks with correct thresholds
+      AC#9: Test apply_threshold_filter batch processes multiple fixtures; returns structured dict with all fields
+      AC#10: Test filtering summary logging includes: total evaluated, category breakdown, threshold_pct
+      Edge case: No picks result (all below threshold) → has_picks=False, no_picks_message populated
+      Edge case: All picks exactly at 5.0% threshold (boundary) → all categorized as RECOMMENDED
+      Edge case: Empty input list → returns empty dicts for each category
+    </ideas>
+  </tests>
+</story-context>

@@ -11,7 +11,6 @@ Usage:
 """
 
 import typer
-from typing import Optional
 import sys
 
 from bet_bot.config import config, validate_config
@@ -31,7 +30,7 @@ app = typer.Typer(
 )
 
 
-def version_callback(value: bool):
+def version_callback(value: bool) -> None:
     """
     Callback for --version flag.
 
@@ -44,7 +43,7 @@ def version_callback(value: bool):
 
 @app.callback()
 def main(
-    version: Optional[bool] = typer.Option(
+    version: bool | None = typer.Option(
         None,
         "--version",
         "-v",
@@ -52,7 +51,7 @@ def main(
         is_eager=True,
         help="Show version and exit"
     )
-):
+) -> None:
     """
     bet-bot: Positive Expected Value Detection Tool for Football Betting
 
@@ -79,7 +78,7 @@ def analyze(
         help="Your betting bankroll in USD",
         min=0
     ),
-    config_path: Optional[str] = typer.Option(
+    config_path: str | None = typer.Option(
         None,
         "--config",
         "-c",
@@ -91,7 +90,7 @@ def analyze(
         "-v",
         help="Enable verbose logging (DEBUG level)"
     )
-):
+) -> None:
     """
     Analyze today's fixtures and find positive EV betting opportunities.
 

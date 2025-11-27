@@ -34,8 +34,20 @@ Architecture:
 Files in this package:
     consolidator.py: Main consolidation orchestration (consolidate_fixtures)
     merger.py: Helper functions for conflict resolution and source tracking
+    validator.py: Data freshness validation (validate_fixtures)
+    quality_scorer.py: Data quality scoring (score_fixtures)
 """
 
 from bet_bot.data.consolidation.consolidator import consolidate_fixtures
+from bet_bot.data.consolidation.quality_scorer import (
+    score_fixtures,
+    DataQualityScore,
+    score_and_filter,
+)
 
-__all__ = ["consolidate_fixtures"]
+__all__ = [
+    "consolidate_fixtures",
+    "score_fixtures",
+    "DataQualityScore",
+    "score_and_filter",
+]

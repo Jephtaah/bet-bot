@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>5</epicId>
+    <storyId>1</storyId>
+    <title>Implement Expected Value Calculation</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/5-1-implement-expected-value-calculation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>calculate expected value (EV) for each AI probability + odds pair</iWant>
+    <soThat>I can identify picks with positive edge for threshold filtering</soThat>
+    <tasks>
+- Task 1: Review architecture and data contracts
+- Task 2: Create EV model structures
+- Task 3: Implement core EV calculation functions
+- Task 4: Implement market-specific EV calculation
+- Task 5: Implement batch EV calculation
+- Task 6: Implement EV filtering helper (for Story 5.2 dependency)
+- Task 7: Implement validation and error handling
+- Task 8: Create unit tests
+- Task 9: Create integration test with Story 4.4
+- Task 10: Write module documentation
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. Create `/src/bet_bot/analysis/edge/ev_calculator.py` module
+2. Implement `def calculate_ev(ai_probability: float, odds: float) -> float` function with EV formula: `EV = (ai_prob × odds) - 1`
+3. Implement `def calculate_implied_probability(odds: float) -> float` function: `implied_prob = 1 / odds`
+4. Calculate EV for all available markets (match result, totals, corners, cards per data-dictionary.md)
+5. Return EV in both decimal format (0.058) and percentage format (+5.8%)
+6. Handle edge case: odds &lt;= 1.0 (invalid, skip, log warning)
+7. Handle edge case: AI prob outside [0.0, 1.0] (invalid, skip, log warning)
+8. Handle edge case: NaN or None values (skip gracefully)
+9. Create `EV` Pydantic model to structure calculation output
+10. Implement batch processing function: `async def calculate_all_evs(fixtures: list[Fixture]) -> list[Fixture]` that attaches EV data to fixtures
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>4. Edge Detection Layer</section>
+        <snippet>
+Purpose: Calculate expected value, filter for picks. Modules:
+- ev_calculator.py - EV = (AI_prob × odds) - 1
+- threshold_filter.py - Filter for EV > 5%
+- confidence_scorer.py - Assess data quality reliability
+
+EV Calculation: ev = (ai_probability * odds) - 1
+        </snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary</title>
+        <section>Section 5: Odds Data &amp; Section 7: Edge Detection</section>
+        <snippet>
+All available markets:
+- Match Result: match_result_home_win, match_result_draw, match_result_away_win (odds from API-Football)
+- Total Goals: total_goals_over_2_5, total_goals_under_2_5, total_goals_over_3_5, total_goals_under_3_5
+- Corners: corners_over_9_5 (if available)
+- Cards: Various card markets (if available)
+
+Odds Freshness Rule: If odds_age_minutes > 60, mark as STALE and reject from analysis
+Threshold: EV > 5% (0.05) required for pick recommendation
+        </snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-4-batch-analyze-all-fixtures-with-openai.md</path>
+        <title>Story 4.4: Batch Analyze All Fixtures</title>
+        <section>Dev Notes - AI Analysis Output Structure</section>
+        <snippet>
+From Story 4.4 (DONE):
+- Fixtures have `ai_analysis` field: `list[MarketAnalysis]`
+- Each `MarketAnalysis` contains: `market_type`, `probabilities` dict, `reasoning`
+- Example: {"market_type": "match_result", "probabilities": {"home": 0.58, "draw": 0.25, "away": 0.17}}
+        </snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>model</kind>
+        <symbol>Fixture</symbol>
+        <reason>Base model that will be extended with ev_results field; contains odds and ai_analysis data needed for EV calculation</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/batch_analyzer.py</path>
+        <kind>service</kind>
+        <symbol>batch_analyze_all_fixtures</symbol>
+        <reason>Produces fixtures with ai_analysis populated; feeds data into EV calculator; error handling pattern for batch processing</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/response_parser.py</path>
+        <kind>service</kind>
+        <symbol>MarketAnalysis model</symbol>
+        <reason>Defines market analysis structure with probabilities; needed to understand how to extract probabilities from ai_analysis field</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>module</kind>
+        <symbol>Custom exception classes</symbol>
+        <reason>Understand existing error handling patterns; may need to add DataValidationError for EV validation</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="python">
+        <package>pydantic>=2.0</package>
+        <package>asyncio (built-in)</package>
+        <package>logging (built-in)</package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <category>Data Validation</category>
+      <rule>All EV calculations must validate odds > 1.0 and ai_probability in [0.0, 1.0] before processing</rule>
+      <source>Story AC #6, #7, #8</source>
+    </constraint>
+    <constraint>
+      <category>Error Handling</category>
+      <rule>Never raise exceptions from main functions; use graceful degradation with logging. Invalid values should set is_valid=False and skip_reason on EVResult model</rule>
+      <source>Story Dev Notes - Learnings from 4.4</source>
+    </constraint>
+    <constraint>
+      <category>Logging Pattern</category>
+      <rule>Use module-level logger; log at DEBUG/INFO/WARNING levels. Progress: "Processing X of Y". Summary: counts and error list</rule>
+      <source>Story Dev Notes - Pattern from 4.4</source>
+    </constraint>
+    <constraint>
+      <category>Async Pattern</category>
+      <rule>Use async/await consistently with asyncio.gather for parallel operations; proper error handling with try/except per fixture</rule>
+      <source>Story AC #5, #10 and CLAUDE.md async patterns</source>
+    </constraint>
+    <constraint>
+      <category>Pydantic</category>
+      <rule>Use Pydantic v2 syntax: field_validator, ConfigDict (not Config class), model_validator. All models must use populate_by_name=True for flexibility</rule>
+      <source>CLAUDE.md - Pydantic v2 mandatory standard</source>
+    </constraint>
+    <constraint>
+      <category>Type Hints</category>
+      <rule>All functions must have explicit return type annotations. Use modern syntax: list[X], dict[K,V], X | None (not Optional, List, Dict)</rule>
+      <source>CLAUDE.md - Type hints mandatory standard</source>
+    </constraint>
+    <constraint>
+      <category>Rate Limiting</category>
+      <rule>Batch processing may feed into Story 5.2 threshold filter; respect API rate limits from Story 4.2 (OpenAI already handles in batch_analyzer)</rule>
+      <source>Story Dev Notes - sequential OpenAI analysis respects rate limits</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>calculate_ev</name>
+      <kind>function</kind>
+      <signature>def calculate_ev(ai_probability: float, odds: float) -> float | None</signature>
+      <path>src/bet_bot/analysis/edge/ev_calculator.py</path>
+      <description>Core EV calculation. Formula: (ai_probability * odds) - 1. Returns None if inputs invalid</description>
+    </interface>
+    <interface>
+      <name>calculate_implied_probability</name>
+      <kind>function</kind>
+      <signature>def calculate_implied_probability(odds: float) -> float | None</signature>
+      <path>src/bet_bot/analysis/edge/ev_calculator.py</path>
+      <description>Bookmaker implied probability from odds. Formula: 1.0 / odds. Returns None if odds <= 1.0</description>
+    </interface>
+    <interface>
+      <name>calculate_all_evs</name>
+      <kind>async_function</kind>
+      <signature>async def calculate_all_evs(fixtures: list[Fixture]) -> list[Fixture]</signature>
+      <path>src/bet_bot/analysis/edge/ev_calculator.py</path>
+      <description>Batch process fixtures. Attaches ev_results list to each fixture. Returns all fixtures (some may have error_message field)</description>
+    </interface>
+    <interface>
+      <name>EVResult</name>
+      <kind>pydantic_model</kind>
+      <signature>class EVResult(BaseModel): market_type, outcome, ai_probability, odds, implied_probability, ev_decimal, ev_percentage, is_valid, skip_reason</signature>
+      <path>src/bet_bot/analysis/edge/ev_calculator.py</path>
+      <description>Structured output for single EV calculation. Used in list[EVResult] on Fixture</description>
+    </interface>
+    <interface>
+      <name>Fixture.ai_analysis</name>
+      <kind>field</kind>
+      <signature>ai_analysis: list[MarketAnalysis] (from Story 4.4)</signature>
+      <path>src/bet_bot/models/fixtures.py</path>
+      <description>Input: AI probability estimates per market from batch_analyzer. Must be populated before calling calculate_all_evs()</description>
+    </interface>
+    <interface>
+      <name>Fixture.odds</name>
+      <kind>field</kind>
+      <signature>odds: dict[str, dict[str, float]] (market -> {outcome: odds_value})</signature>
+      <path>src/bet_bot/models/fixtures.py</path>
+      <description>Input: Bookmaker odds per market. Example: {"match_result": {"home": 2.10, "draw": 3.50, "away": 3.20}}</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Unit tests: Pydantic model validation, EV formula accuracy (mathematical correctness), edge case handling (invalid odds, invalid probabilities, NaN/None).
+Integration tests: End-to-end with Story 4.4 fixture output, real MarketAnalysis data structure, multiple market types, batch processing pipeline.
+Framework: pytest. Coverage target: minimum 80% overall, 100% for critical paths (calculate_ev, calculate_implied_probability).
+Test locations: tests/unit/test_ev_calculator.py and tests/integration/test_ev_calculation_pipeline.py
+    </standards>
+    <locations>
+      <location>tests/unit/</location>
+      <location>tests/integration/</location>
+    </locations>
+    <ideas>
+Test calculate_ev() accuracy (AC #2):
+  - Valid case: (0.58 × 2.10) - 1 = 0.058 (5.8% EV) ✓
+  - Valid case: (0.45 × 1.80) - 1 = -0.19 (negative EV, valid calculation) ✓
+  - Invalid: odds <= 1.0 → returns None ✓
+  - Invalid: ai_prob > 1.0 → returns None ✓
+  - Invalid: ai_prob < 0.0 → returns None ✓
+  - Edge: odds = 1.01, ai_prob = 0.99 → valid ✓
+
+Test EVResult model (AC #9):
+  - Valid EVResult creation with all fields ✓
+  - is_valid = True when odds > 1.0 and 0 <= ai_prob <= 1.0 ✓
+  - is_valid = False with skip_reason when validation fails ✓
+
+Test calculate_all_evs() batch processing (AC #5, #10):
+  - Empty fixture list → returns empty list ✓
+  - Single fixture with match_result market → produces 3 EVResult objects (home, draw, away) ✓
+  - Multiple fixtures with mixed success/failure → all processed, failures logged ✓
+  - Progress logging: "Processing X of Y" appears ✓
+  - Summary logging: total count and error count logged ✓
+
+Test filter_evs_by_threshold() (AC for Story 5.2 prep):
+  - Separates above/below 5% threshold correctly ✓
+  - Default threshold 5% ✓
+  - Custom threshold works ✓
+
+Integration test with Story 4.4:
+  - Load real fixture with ai_analysis field populated by batch_analyzer ✓
+  - Call calculate_all_evs() ✓
+  - Verify ev_results attached to fixture ✓
+  - Verify EV calculations mathematically correct against known values ✓
+  - Test multiple market types (match_result, total_goals, corners) ✓
+    </ideas>
+  </tests>
+</story-context>

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>3.3</storyId>
+    <title>Create Data Quality Scoring</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/3-3-create-data-quality-scoring.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>As a developer</asA>
+    <iWant>I want to assess overall data quality for each fixture</iWant>
+    <soThat>confidence scoring can account for data limitations</soThat>
+    <tasks>
+      - [ ] Task 1: Review data quality requirements and scoring framework (AC: #1, #2)
+      - [ ] Task 2: Create DataQualityScore Pydantic model (AC: #5)
+      - [ ] Task 3: Create quality_scorer module structure (AC: #1)
+      - [ ] Task 4: Implement required fields presence check (AC: #2)
+      - [ ] Task 5: Implement data freshness check (AC: #2)
+      - [ ] Task 6: Implement injury data presence check (AC: #2)
+      - [ ] Task 7: Implement H2H data presence check (AC: #2)
+      - [ ] Task 8: Implement odds markets availability check (AC: #2)
+      - [ ] Task 9: Implement form sample size check (AC: #2)
+      - [ ] Task 10: Implement overall score aggregation (AC: #2, #3, #4)
+      - [ ] Task 11: Implement main scoring orchestration (AC: #1, #4, #8)
+      - [ ] Task 12: Implement comprehensive logging (AC: #6)
+      - [ ] Task 13: Implement edge case handling
+      - [ ] Task 14: Create scoring integration function (AC: #7)
+      - [ ] Task 15: Write comprehensive unit tests (AC: #2, #4, #6)
+      - [ ] Task 16: Integration with validation pipeline (AC: #7)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. Create `/src/bet_bot/data/consolidation/quality_scorer.py`
+2. Score on 0-100 scale based on:
+   - All required fields present: +20 pts
+   - All data &lt; 24h old: +20 pts
+   - Injury data present: +15 pts
+   - H2H data present: +10 pts
+   - Multiple odds markets available: +10 pts
+   - Form data from 10+ games: +10 pts
+3. Clamp to [0, 100]
+4. Attach quality score to each fixture
+5. Create Pydantic model for quality score results
+6. Log scoring results per fixture with breakdown
+7. Integrate with data consolidation pipeline (receives validated fixtures from Story 3.2)
+8. Return list of fixtures with quality scores attached
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification - Data Consolidation Layer</title>
+        <section>Data Consolidation Layer (lines 113-132)</section>
+        <snippet>Data consolidation pipeline outputs clean fixtures. Story 3.3 quality scoring validates this data for confidence scoring downstream. Quality scores inform confidence penalties in Story 5.3.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/3-2-implement-data-freshness-validation.md</path>
+        <title>Story 3.2 - Data Freshness Validation</title>
+        <section>ValidationResult Model and Freshness Scoring (lines 37-42)</section>
+        <snippet>ValidationResult includes status enum (PASS/DEGRADATION/CRITICAL), individual status fields for each data type, and data_freshness_score (0-100) for confidence downstream. Story 3.3 will use ValidationResult.freshness_score as one component of quality assessment.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/3-1-create-data-consolidation-pipeline.md</path>
+        <title>Story 3.1 - Data Consolidation Pipeline</title>
+        <section>Consolidated Fixture Structure and Source Lineage (lines 254-282)</section>
+        <snippet>Each consolidated fixture includes source_lineage tracking timestamps: form_data_timestamp, injuries_timestamp, odds_timestamp. Story 3.3 will use these timestamps to assess data freshness component of quality score.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/bet_bot/data/consolidation/validator.py</path>
+        <kind>module</kind>
+        <symbol>ValidationResult</symbol>
+        <lines>51-144</lines>
+        <reason>Story 3.3 receives validated fixtures (Fixture, ValidationResult) tuples from Story 3.2. ValidationResult provides validation status, individual field statuses (fixture_valid, odds_status, form_status, injuries_status, h2h_status), data_freshness_score (0-100), and age metrics. Story 3.3 will use this to assess freshness component (AC#2).</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/consolidation/consolidator.py</path>
+        <kind>module</kind>
+        <symbol>consolidate_fixtures</symbol>
+        <lines>38-143</lines>
+        <reason>Story 3.3 receives Fixture objects output by Story 3.1 consolidator. Fixture model includes all fields needed for quality assessment: fixture_date, home_team (with form/injuries), away_team, league, odds (dict), head_to_head list. Story 3.3 will iterate over consolidated fixtures to score data quality (AC#4, #8).</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/models/fixtures.py</path>
+        <kind>module</kind>
+        <symbol>Fixture</symbol>
+        <reason>Fixture Pydantic model (v2) defines the structure that Story 3.3 will assess for quality. Key fields for scoring: fixture_date, home_team/away_team (Team model), odds (dict[str, dict[str, float]]), head_to_head (list), and Team model includes form_5_games and injuries list. Story 3.3 will check completeness and quality of these fields (AC#2, #4).</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>module</kind>
+        <symbol>DataValidationError</symbol>
+        <lines>1-50</lines>
+        <reason>Story 3.3 will use DataValidationError for validation failures following CLAUDE.md error handling patterns. Error handling should be non-invasive: score all fixtures, never raise exception, just flag quality scores (AC#6, #13).</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="pydantic" version="2.0+">Pydantic v2 for DataQualityScore model definition and validation. Use ConfigDict, field_validator decorators.</package>
+        <package name="datetime" version="builtin">Core datetime and timezone for timestamp comparisons and UTC handling. Use datetime.now(timezone.utc) instead of deprecated utcnow().</package>
+        <package name="logging" version="builtin">Structured logging for score breakdown per fixture and summary statistics (AC#6).</package>
+        <package name="asyncio" version="builtin">Async/await pattern for consistency with consolidation pipeline. Main function score_fixtures() marked async.</package>
+      </python>
+      <existing-modules>
+        <module name="src/bet_bot/data/models/fixtures.py">Fixture, Team Pydantic models - input data structures</module>
+        <module name="src/bet_bot/data/consolidation/consolidator.py">consolidate_fixtures() - upstream function providing consolidated Fixture[] input</module>
+        <module name="src/bet_bot/data/consolidation/validator.py">ValidationResult model and validate_fixtures() - upstream validation that provides validation status for freshness component</module>
+        <module name="src/bet_bot/exceptions.py">DataValidationError - custom exception hierarchy</module>
+      </existing-modules>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- **Architecture Pattern:** Data quality assessment is non-invasive - scoring adds metadata (DataQualityScore), never modifies Fixture data or rejects fixtures (AC#4, #6).
+- **Scoring Approach:** Additive (start at 0, add points) rather than subtractive (avoid penalty-based scoring seen in confidence). This makes quality scoring independent and transparent (Dev Notes line 324).
+- **Data Flow Integration:** Receives consolidated+validated fixtures from Story 3.2 (tuples of Fixture and ValidationResult). Uses ValidationResult status/freshness_score for freshness component. Must handle both PASS and DEGRADATION fixtures (CRITICAL already filtered by Story 3.2 pipeline).
+- **Point Allocation (AC#2):** Required fields +20, Freshness +20, Injuries +15, H2H +10, Markets +10, Form sample +10 = 85 pts max from components. Bonus: +15 if PASS status (capped at 100 total). See Dev Notes line 328-346 for rationale.
+- **Timestamp Handling:** All timestamp comparisons use datetime.now(timezone.utc) (Python 3.14+ compliance). Consolidator adds timestamps in source_lineage dict (form_data_timestamp, injuries_timestamp, odds_timestamp). Validator provides validation status with individual freshness assessments (Dev Notes line 273-277).
+- **Error Handling:** All fixtures processed (never crash on individual fixture scoring failure). Logging at INFO for score breakdowns, WARNING for anomalies (e.g., very low scores), never ERROR (scoring doesn't reject) (AC#6).
+- **Downstream Integration:** Quality score is consumed by Story 5.3 (confidence scoring) which will apply penalties based on low quality. Quality is separate from confidence (Dev Notes line 268-271): quality measures data completeness/freshness, confidence decides whether to trust analysis given data quality.
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>score_fixtures()</name>
+      <kind>async function</kind>
+      <signature>async def score_fixtures(validated_fixtures: list[tuple[Fixture, ValidationResult]]) -> list[tuple[Fixture, DataQualityScore]]</signature>
+      <path>src/bet_bot/data/consolidation/quality_scorer.py</path>
+      <description>Main orchestration function. Accepts list of (Fixture, ValidationResult) tuples from Story 3.2 validation pipeline. Returns list of (Fixture, DataQualityScore) tuples with quality scores attached. Never filters fixtures (returns all, including degraded). Logs breakdown per fixture and summary statistics.</description>
+    </interface>
+    <interface>
+      <name>DataQualityScore</name>
+      <kind>Pydantic model</kind>
+      <signature>class DataQualityScore(BaseModel): fixture_id, overall_score (0-100), score_breakdown (dict), timestamp, component_scores (required_fields_score, freshness_score, injury_score, h2h_score, markets_score, form_sample_score), reasoning (str)</signature>
+      <path>src/bet_bot/data/consolidation/quality_scorer.py</path>
+      <description>Result model for quality scoring. Serializable (for logging/storage). Tracks individual component scores (6 components = 85 pts max) and bonus if validation PASS (+15). Overall score clamped to [0, 100]. Reasoning field explains which factors helped/hurt score for debugging.</description>
+    </interface>
+    <interface>
+      <name>ValidationResult</name>
+      <kind>Pydantic model (from Story 3.2)</kind>
+      <signature>class ValidationResult(BaseModel): fixture_id, status (enum: PASS/DEGRADATION/CRITICAL), reason, fixture_valid (bool), odds_status (enum), form_status (enum), injuries_status (enum), h2h_status (enum), data_freshness_score (0-100), age metrics</signature>
+      <path>src/bet_bot/data/consolidation/validator.py:51-144</path>
+      <description>Upstream validation result from Story 3.2. Story 3.3 will use: status enum (PASS=+15 bonus, DEGRADATION/CRITICAL affects scoring), individual field statuses for component scoring, data_freshness_score (0-100) as freshness component input, age metrics (odds_age_minutes, form_age_hours, etc.) for optional transparency.</description>
+    </interface>
+    <interface>
+      <name>Fixture</name>
+      <kind>Pydantic model (from Story 2.1)</kind>
+      <signature>class Fixture(BaseModel): fixture_id, kickoff_time, home_team (Team), away_team (Team), league, odds (dict), head_to_head (list), source_lineage (dict with timestamps)</signature>
+      <path>src/bet_bot/data/models/fixtures.py</path>
+      <description>Input data structure. Story 3.3 will assess: fixture_date (required), home/away team objects (with form_5_games list, injuries list), odds dict (count markets), head_to_head list (presence), source_lineage timestamps (form_data_timestamp, injuries_timestamp, odds_timestamp for age calculation). Team model has form_5_games (list of str) and injuries_ids (list).</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Unit tests use pytest with async support (@pytest.mark.asyncio). Test patterns from Story 3.2 validator tests apply: mock Fixture and ValidationResult objects, verify component scoring (each _score_*() helper returns correct points 0-max), verify aggregation logic (PASS validates add bonus, totals clamped to 100), verify logging output format and level (INFO for score breakdown, no ERROR/CRITICAL for scoring). Target 85%+ coverage on quality_scorer.py module. Use parametrized tests for component scoring thresholds (e.g., test form sample size: 10+=10pts, 5-9=5pts, 5+=3pts, &lt;5=0pts).
+    </standards>
+    <locations>
+/tests/unit/test_quality_scorer.py - Main unit test file for quality_scorer.py module. Test discovery: pytest tests/unit/test_quality_scorer.py -v
+    </locations>
+    <ideas>
+- AC#2 Component Scoring Tests:
+  * test_score_required_fields_all_present() → 20 pts
+  * test_score_required_fields_one_missing() → 10 pts
+  * test_score_required_fields_multiple_missing() → 0 pts
+  * test_score_freshness_pass_status() → 20 pts (use ValidationResult with PASS status)
+  * test_score_freshness_degradation_status() → 10 pts
+  * test_score_freshness_critical_status() → 0 pts
+  * test_score_injuries_both_teams() → 15 pts
+  * test_score_injuries_one_team() → 8 pts
+  * test_score_injuries_none() → 0 pts
+  * test_score_h2h_5plus_matches() → 10 pts
+  * test_score_h2h_2to4_matches() → 5 pts
+  * test_score_h2h_none() → 0 pts
+  * test_score_odds_3plus_markets() → 10 pts
+  * test_score_odds_2_markets() → 5 pts
+  * test_score_odds_1_market() → 2 pts
+  * test_score_odds_none() → 0 pts
+  * test_score_form_10plus_both_teams() → 10 pts
+  * test_score_form_5to9_both_teams() → 5 pts
+  * test_score_form_5plus_one_team() → 3 pts
+  * test_score_form_less_than_5() → 0 pts
+
+- AC#4, #6 Integration &amp; Logging Tests:
+  * test_score_fixtures_returns_all_with_scores() - Verify all fixtures returned (none filtered)
+  * test_score_fixtures_logging_per_fixture() - Verify INFO log per fixture with breakdown format: "Fixture 12345: Quality=78/100 (required=20, freshness=20, ...)"
+  * test_score_fixtures_logging_summary() - Verify summary: "Scored X fixtures: avg=Y, min=Z, max=W"
+  * test_quality_score_model_serialization() - Verify DataQualityScore can be serialized to dict/JSON
+
+- AC#3 Clamping &amp; Bonus Tests:
+  * test_score_clamped_to_100_max() - Excellent data (85+15 bonus) clamped to 100
+  * test_score_clamped_to_0_min() - All missing data stays at 0
+  * test_score_pass_status_adds_15_bonus() - PASS status adds +15 (max 100)
+  * test_score_degradation_status_no_bonus() - DEGRADATION status no bonus
+
+- AC#13 Edge Case Tests:
+  * test_score_fixture_no_form_data() - Score 0 for form_sample_size, rest normal
+  * test_score_fixture_no_injuries() - Score 0 for injuries, rest normal (not critical)
+  * test_score_fixture_single_market() - Score 2 for 1 market
+  * test_score_fixture_all_degraded_data() - Low scores for degradation, still produces score
+  * test_score_fixture_partial_data() - Some optional fields missing, continues scoring
+    </ideas>
+  </tests>
+</story-context>

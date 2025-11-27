@@ -1,6 +1,6 @@
 # Story 2.4: Fetch Odds from Primary Source
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

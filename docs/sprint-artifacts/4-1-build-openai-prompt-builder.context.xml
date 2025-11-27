@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>4-1</storyId>
+    <title>Build OpenAI Prompt Builder</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-1-build-openai-prompt-builder.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>create structured prompts for OpenAI analysis</iWant>
+    <soThat>AI gets rich context to estimate probabilities</soThat>
+    <tasks>
+      - [ ] Task 1: Review OpenAI prompt engineering requirements (AC: #1, #2)
+      - [ ] Task 2: Create prompt builder module structure (AC: #1)
+      - [ ] Task 3: Implement fixture data validation (AC: #8)
+      - [ ] Task 4: Create fixture context formatter (AC: #2, #3)
+      - [ ] Task 5: Create team form formatter (AC: #2, #3)
+      - [ ] Task 6: Create injury/suspension formatter (AC: #2, #3)
+      - [ ] Task 7: Create head-to-head history formatter (AC: #2, #3)
+      - [ ] Task 8: Create odds formatter (AC: #2, #3)
+      - [ ] Task 9: Create analysis request formatter (AC: #4, #5)
+      - [ ] Task 10: Implement prompt assembly function (AC: #1, #3, #4, #5, #6)
+      - [ ] Task 11: Implement token counting (AC: #6)
+      - [ ] Task 12: Implement prompt response format specification (AC: #4, #5)
+      - [ ] Task 13: Create comprehensive logging (AC: #2, #3, #6)
+      - [ ] Task 14: Create helper function for market availability (AC: #3, #8)
+      - [ ] Task 15: Write comprehensive unit tests (AC: #1-#8)
+      - [ ] Task 16: Create integration helper for Story 4.2 (AC: #1, #3)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Create `/src/bet_bot/analysis/ai/prompt_builder.py` module
+    2. Build prompt that includes:
+       - Fixture details (teams, league, date)
+       - Team form (last 5-10 results, goals, win %)
+       - Injury/suspension info
+       - Head-to-head history
+       - Current odds for all markets
+    3. Format data clearly for AI understanding
+    4. Request probabilities for: match result, total goals, corners, cards
+    5. Request reasoning explanation
+    6. Keep prompt concise (less than 2000 tokens)
+    7. Implement structured JSON request format
+    8. Implement validation of fixture data before prompt generation
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>System Architecture - OpenAI Analysis Layer</title>
+        <section>OpenAI Analysis Layer (Module 3)</section>
+        <snippet>The OpenAI Analysis Layer sends structured data to OpenAI and gets probability estimates. Modules include prompt_builder.py (constructs analysis prompt), client.py (manages API calls), response_parser.py (parses output). Prompt strategy: Input JSON with fixture, form, injuries, odds → Output JSON with markets array, probabilities, reasoning.</snippet>
+      </doc>
+      <doc>
+        <path>docs/development-stories.md</path>
+        <title>Story 4.1: Build OpenAI Prompt Builder</title>
+        <section>PHASE 4: AI Analysis Integration</section>
+        <snippet>Story definition from development roadmap. Create /src/bet_bot/analysis/ai/prompt_builder.py module. Build prompt including fixture details, team form, injury info, H2H history, current odds. Format data clearly for AI understanding. Request probabilities for match result, total goals, corners, cards. Request reasoning explanation. Keep prompt concise (less than 2000 tokens).</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Schema and Field Definitions</title>
+        <section>Core Models (Pydantic)</section>
+        <snippet>Fixture model contains: id (str), home_team (Team), away_team (Team), league (str), kickoff_time (datetime), odds (dict[str, dict[str, float]]), head_to_head_history (list). Team model contains: id (str), name (str), form_5_games (list[str]), avg_goals_for (float), avg_goals_against (float), injuries (list).</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/3-3-create-data-quality-scoring.md</path>
+        <title>Data Quality Scoring (Story 3.3)</title>
+        <section>Quality Score Integration</section>
+        <snippet>Each fixture has quality_score (0-100) attached from Story 3.3. Quality score informs prompt confidence and helps decide which data to emphasize. Fixtures from Story 3.3 are already validated and consolidated before reaching prompt builder.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>models</kind>
+        <symbol>Fixture, Team, League</symbol>
+        <lines>1-289</lines>
+        <reason>Core Fixture model that the prompt builder receives as input. Defines Team, League, and Fixture Pydantic models with validation. Story 4.1 uses Fixture objects populated by Story 3.3 consolidation pipeline.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/analysis.py</path>
+        <kind>models</kind>
+        <symbol>AIAnalysis, MarketAnalysis</symbol>
+        <lines>1-141</lines>
+        <reason>AIAnalysis and MarketAnalysis models define the expected output format from OpenAI. Story 4.2 will parse OpenAI responses into this format. Story 4.1 prompt should request JSON matching this schema.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/form.py</path>
+        <kind>models</kind>
+        <symbol>TeamForm, RecentResult</symbol>
+        <reason>Form data models used to represent team recent performance. Story 4.1 accesses form_5_games from Team model to build team form section of prompt.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/injuries.py</path>
+        <kind>models</kind>
+        <symbol>InjuredPlayer, Injury</symbol>
+        <reason>Injury models define injured player information structure. Story 4.1 formats injury data from Team.injuries list into human-readable prompt section.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/odds.py</path>
+        <kind>models</kind>
+        <symbol>Odds, Market</symbol>
+        <reason>Odds models define odds data structure. Story 4.1 accesses Fixture.odds dict to extract market probabilities and formats them for prompt.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/consolidation/quality_scorer.py</path>
+        <kind>service</kind>
+        <symbol>DataQualityScore, calculate_quality_score</symbol>
+        <lines>1-80</lines>
+        <reason>Quality scoring from Story 3.3 attaches quality_score to each fixture (0-100). Story 4.1 uses quality_score to decide which data to emphasize and inform prompt confidence level.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/consolidation/validator.py</path>
+        <kind>service</kind>
+        <symbol>ValidationResult, ValidationStatus, validate_fixtures</symbol>
+        <reason>Validation from Story 3.2 checks data freshness. Story 4.1 receives fixtures already validated for freshness and can focus on fixture-specific data validation (non-null fields, kickoff time not in past).</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/utils/logging.py</path>
+        <kind>utility</kind>
+        <symbol>setup_logging</symbol>
+        <reason>Logging utility from Story 1.5. Story 4.1 must follow existing logging patterns: DEBUG for raw prompts, INFO for fixture summaries, WARNING for validation failures.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <runtime>
+        <package>pydantic</package>
+        <version>2.12.4</version>
+        <purpose>Data validation models for Fixture input and response validation</purpose>
+      </runtime>
+      <runtime>
+        <package>openai</package>
+        <version>2.8.1</version>
+        <purpose>OpenAI API SDK (used in Story 4.2, but prompt builder must format data for OpenAI API)</purpose>
+      </runtime>
+      <runtime>
+        <package>typing-extensions</package>
+        <version>4.15.0</version>
+        <purpose>Type hints for complex generic types (list[T], dict[K,V], Optional types)</purpose>
+      </runtime>
+      <stdlib>
+        <module>asyncio</module>
+        <purpose>Async patterns (main function marked async for consistency with orchestration)</purpose>
+      </stdlib>
+      <stdlib>
+        <module>datetime</module>
+        <purpose>datetime.now(timezone.utc) for kickoff time validation and timestamps</purpose>
+      </stdlib>
+      <stdlib>
+        <module>logging</module>
+        <purpose>Logger for DEBUG, INFO, WARNING level logs per existing patterns</purpose>
+      </stdlib>
+      <stdlib>
+        <module>json</module>
+        <purpose>JSON formatting for structured request in prompt specification</purpose>
+      </stdlib>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <category>Language Version</category>
+      <description>Must use Python 3.14+ compatible syntax. NO datetime.utcnow() - use datetime.now(timezone.utc). Use modern type hints: list[X], dict[K,V], X | None instead of List, Dict, Optional. All functions must have explicit return type annotations including -> None.</description>
+      <source>CLAUDE.md</source>
+    </constraint>
+    <constraint>
+      <category>Async Patterns</category>
+      <description>Main function build_analysis_prompt() must be marked async for consistency with Story 4.4 orchestration. Use asyncio patterns if parallel operations needed, but current story is pure formatting (no blocking I/O).</description>
+      <source>technical-spec.md</source>
+    </constraint>
+    <constraint>
+      <category>Error Handling</category>
+      <description>Follow CLAUDE.md error handling patterns: Use custom exception hierarchy (not generic Exception). Log all validation failures at WARNING level. Graceful degradation: If data missing, continue without it (don't fail). Never swallow exceptions without logging.</description>
+      <source>CLAUDE.md</source>
+    </constraint>
+    <constraint>
+      <category>Pydantic Models</category>
+      <description>Must use Pydantic v2 syntax. Use @field_validator (not @validator). Use ConfigDict (not Config class). All models require populate_by_name=True if aliases used.</description>
+      <source>CLAUDE.md</source>
+    </constraint>
+    <constraint>
+      <category>Data Validation</category>
+      <description>Implement _validate_fixture_for_prompt() that checks: fixture_id exists and non-empty, home_team and away_team with ids/names, league name exists, kickoff_time is datetime and not in past, odds dict is non-empty with at least match_result market. Log validation failures at WARNING, return True/False.</description>
+      <source>Story 4.1 Acceptance Criteria #8</source>
+    </constraint>
+    <constraint>
+      <category>Token Limiting</category>
+      <description>Estimate token count before sending. Use conservative estimate: tokens ≈ words / 0.75. Warn at 1800 tokens, error/reject at 2500 tokens. Include system prompt, fixture, and request tokens in estimate.</description>
+      <source>Story 4.1 Tasks 11</source>
+    </constraint>
+    <constraint>
+      <category>Prompt Format</category>
+      <description>Prompt must be human-readable (for debugging) AND include structured JSON request format. Specify expected JSON response format in prompt with example. Response schema must match AIAnalysis model from Story 2.1.</description>
+      <source>Story 4.1 Tasks 12</source>
+    </constraint>
+    <constraint>
+      <category>Conciseness</category>
+      <description>Prompt must be less than 2000 tokens total. Request concise reasoning (max 100 words per market). Include quality_score assessment to justify data confidence level.</description>
+      <source>Story 4.1 Acceptance Criteria #6</source>
+    </constraint>
+    <constraint>
+      <category>Logging Standards</category>
+      <description>DEBUG: raw prompt (first 500 chars for sampling). INFO: fixture summary (teams, league, market count), estimated token count. WARNING: validation failures, data issues, token count approaching 1800. NEVER log API keys or sensitive data. Include fixture_id in all messages.</description>
+      <source>Story 4.1 Tasks 13</source>
+    </constraint>
+    <constraint>
+      <category>Module Structure</category>
+      <description>Create /src/bet_bot/analysis/ai/__init__.py (if not exists). Main entry point: build_analysis_prompt() function (async). Helper functions: _validate_fixture_for_prompt(), _format_fixture_details(), _format_team_form(), _format_injuries(), _format_h2h_history(), _format_odds(), _format_analysis_request(), _estimate_token_count(), _get_available_markets(). Integration function: export_prompt_for_api().</description>
+      <source>Story 4.1 Tasks 2, 16</source>
+    </constraint>
+    <constraint>
+      <category>Integration with Story 4.2</category>
+      <description>export_prompt_for_api() function should return dict with keys: "system_prompt" (str), "user_message" (str). System prompt defines AI as sports betting analyst. This format is ready for OpenAI client integration in Story 4.2.</description>
+      <source>Story 4.1 Tasks 16</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>build_analysis_prompt()</name>
+      <kind>async function</kind>
+      <signature>async def build_analysis_prompt(fixture: Fixture) -> str</signature>
+      <path>src/bet_bot/analysis/ai/prompt_builder.py</path>
+      <description>Main entry point. Validates fixture, builds all data sections, assembles prompt with system instructions, enforces token limit, returns complete prompt string ready for OpenAI API.</description>
+      <input>Fixture object from Story 3.3 (consolidated and scored)</input>
+      <output>String containing complete prompt (system + user message parts)</output>
+    </interface>
+    <interface>
+      <name>export_prompt_for_api()</name>
+      <kind>function</kind>
+      <signature>def export_prompt_for_api(fixture: Fixture) -> dict[str, str]</signature>
+      <path>src/bet_bot/analysis/ai/prompt_builder.py</path>
+      <description>Integration helper for Story 4.2. Wraps build_analysis_prompt() output into dict format for OpenAI client.</description>
+      <input>Fixture object</input>
+      <output>Dict with "system_prompt" and "user_message" keys</output>
+    </interface>
+    <interface>
+      <name>_validate_fixture_for_prompt()</name>
+      <kind>function</kind>
+      <signature>def _validate_fixture_for_prompt(fixture: Fixture) -> bool</signature>
+      <path>src/bet_bot/analysis/ai/prompt_builder.py (internal)</path>
+      <description>Validates fixture has all required fields for prompt building. Logs at WARNING if validation fails. Returns True/False (raises exception only on critical failures).</description>
+    </interface>
+    <interface>
+      <name>Fixture model interface</name>
+      <kind>Pydantic model</kind>
+      <signature>class Fixture(BaseModel)</signature>
+      <path>src/bet_bot/models/fixtures.py:172-289</path>
+      <description>Input data structure from Story 3.3 consolidation. Contains all fields needed: fixture_id, kickoff_time, home_team (with form_5_games, injuries), away_team, league, odds dict (market → outcome → odds), head_to_head_history list.</description>
+      <fields>
+        fixture_id: str
+        kickoff_time: datetime (timezone-aware)
+        home_team: Team (with id, name, form_5_games, avg_goals_for, avg_goals_against, injuries)
+        away_team: Team
+        league: League (league_id, league_name, league_country, league_season)
+        odds: dict[str, dict[str, float]] (e.g., {"match_result": {"home": 2.1, "draw": 3.5, "away": 3.2}})
+        head_to_head_history: list[str] (W/D/L from home perspective)
+      </fields>
+    </interface>
+    <interface>
+      <name>AIAnalysis response schema</name>
+      <kind>Pydantic model</kind>
+      <signature>class AIAnalysis(BaseModel)</signature>
+      <path>src/bet_bot/models/analysis.py:92-141</path>
+      <description>Expected OpenAI response format that prompt should request. Contains fixture_id, markets array with MarketAnalysis objects (market_type, ai_probability, reasoning, confidence), analysis_timestamp.</description>
+      <fields>
+        fixture_id: str
+        markets: list[MarketAnalysis]
+        analysis_timestamp: datetime
+        Each market: type, probabilities (dict), reasoning (str)
+      </fields>
+    </interface>
+    <interface>
+      <name>Logging patterns</name>
+      <kind>utility</kind>
+      <path>src/bet_bot/utils/logging.py</path>
+      <description>Existing logging setup from Story 1.5. Use logger.debug(), logger.info(), logger.warning() following established patterns. Never log API keys. Include fixture_id for traceability.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing framework: pytest (with pytest-asyncio for async tests).
+      Model validation: pytest fixtures for sample data, use Pydantic validators.
+      Coverage target: 85%+ code coverage for prompt_builder.py.
+      Pattern: Arrange-Act-Assert (AAA) structure. Mock data using sample fixtures from development-stories.md.
+      Test async functions with @pytest.mark.asyncio decorator.
+    </standards>
+    <locations>
+      /tests/unit/test_prompt_builder.py - Main test file
+      /tests/unit/test_models.py - Existing model validation tests (already covering Fixture, Team, League)
+      /tests/fixtures/ - Sample data (if needed for test fixtures)
+    </locations>
+    <ideas>
+      Test fixture validation: Valid fixture passes, missing fixture_id fails, missing teams fails, teams without ids fail, past kickoff_time fails, empty odds fails.
+      Test fixture details formatter: Correct format with all fields, handles missing location, cleans team names (whitespace, HTML).
+      Test team form formatter: Includes recent form and win %, handles missing form data, calculates win % correctly (W=1, D=0.5, L=0).
+      Test injury formatter: Lists injuries with positions, handles no injuries, limits to 5 players max.
+      Test H2H formatter: Shows last 5 matches correctly, calculates H2H record, handles no H2H data.
+      Test odds formatter: Shows all available markets, calculates implied probabilities, handles missing markets gracefully.
+      Test analysis request formatter: Requests all four markets (match_result, total_goals, corners, cards), requests reasoning, specifies JSON format.
+      Test prompt assembly: Validates before assembling, includes all sections in order, no duplication.
+      Test token counting: Estimates within 10% of actual for typical fixtures, warns on high token count, raises on > 2500 tokens.
+      Test edge cases: Minimal data (only required fields), all optional data, long team names (50+ chars), Unicode characters, old H2H data (20+ matches), missing optional fields.
+    </ideas>
+  </tests>
+</story-context>

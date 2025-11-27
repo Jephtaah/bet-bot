@@ -22,7 +22,7 @@ The consolidation process:
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from bet_bot.data.consolidation.merger import (
     merge_optional_list,
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 async def consolidate_fixtures(
     raw_data: dict[str, Any],
-    fixture_list: list[dict] | None = None
+    fixture_list: list[dict[str, Any]] | None = None
 ) -> list[Fixture]:
     """
     Consolidate multi-source fixture data into unified Fixture objects.
@@ -144,9 +144,9 @@ async def consolidate_fixtures(
 
 
 async def _consolidate_single_fixture(
-    raw_fixture: dict,
+    raw_fixture: dict[str, Any],
     form_data: dict[str, TeamForm],
-    injuries_data: dict[str, list],
+    injuries_data: dict[str, list[Any]],
     odds_data: dict[str, Any],
     h2h_data: dict[str, list[str]]
 ) -> Fixture:
@@ -177,12 +177,12 @@ async def _consolidate_single_fixture(
             raise ValueError("fixture_id required")
 
         # Extract team data
-        home_team_id = raw_fixture.get('home_team_id')
-        home_team_name = raw_fixture.get('home_team_name')
-        away_team_id = raw_fixture.get('away_team_id')
-        away_team_name = raw_fixture.get('away_team_name')
-        league_id = raw_fixture.get('league_id')
-        league_name = raw_fixture.get('league_name')
+        home_team_id = str(raw_fixture.get('home_team_id', ''))
+        home_team_name = str(raw_fixture.get('home_team_name', ''))
+        away_team_id = str(raw_fixture.get('away_team_id', ''))
+        away_team_name = str(raw_fixture.get('away_team_name', ''))
+        league_id = str(raw_fixture.get('league_id', ''))
+        league_name = str(raw_fixture.get('league_name', ''))
         league_country = raw_fixture.get('league_country', 'Unknown')
         league_season = raw_fixture.get('league_season', 2025)
 
@@ -238,15 +238,15 @@ async def _consolidate_single_fixture(
         h2h = h2h_data.get(fixture_id, []) or []
 
         # ===== CREATE FIXTURE OBJECT =====
-        fixture = Fixture(
-            fixture_id=fixture_id,
-            kickoff_time=kickoff_time,
-            home_team=home_team,
-            away_team=away_team,
-            league=league,
-            odds=odds,
-            head_to_head_history=h2h
-        )
+        fixture = Fixture.model_validate({
+            "fixture.id": fixture_id,
+            "fixture.date": kickoff_time,
+            "home_team": home_team,
+            "away_team": away_team,
+            "league": league,
+            "odds": odds,
+            "head_to_head_history": h2h
+        })
 
         logger.debug(
             f"Consolidated fixture {fixture_id}: "
@@ -264,7 +264,7 @@ def _build_team_with_form(
     team_id: str,
     team_name: str,
     form_data: dict[str, TeamForm],
-    injuries_data: dict[str, list]
+    injuries_data: dict[str, list[Any]]
 ) -> Team:
     """
     Build Team object with form and injury data merged.

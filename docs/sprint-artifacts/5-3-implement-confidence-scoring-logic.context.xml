@@ -1,0 +1,343 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>5</epicId>
+    <storyId>5-3</storyId>
+    <title>Implement Confidence Scoring Logic</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/5-3-implement-confidence-scoring-logic.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>to score confidence in each recommendation based on data quality and freshness</iWant>
+    <soThat>the user knows the reliability of each pick</soThat>
+    <tasks>
+- Task 1: Review architecture and data contracts
+  - Load development-stories.md Story 5.3 to understand confidence scoring requirements
+  - Understand that confidence is separate from EV calculation (5.1) and thresholding (5.2)
+  - Verify data model: timestamps available in Fixture and EVResult from previous stories
+  - Confirm scoring range: [0, 100] with base of 75
+  - Document dependencies: Requires Story 5.1 (EVResult), Story 5.2 (picks), Story 3.3 (data quality score for reference)
+
+- Task 2: Create ConfidenceScoreBreakdown Pydantic model
+  - Create Pydantic model with fields: base_score, form_adjustment, injury_adjustment, odds_adjustment, sample_size_adjustment, total_adjustments, final_confidence, explanation
+  - Add docstring with example breakdown
+  - Add validation: final_confidence must be in [0, 100]
+  - Add calculated field for total_adjustments (sum of all adjustments)
+
+- Task 3: Implement base score function
+  - Function: def calculate_base_score() -> int
+  - Always return 75 (constant base score)
+  - Include docstring explaining why 75% baseline
+
+- Task 4: Implement individual scoring functions
+  - Function: def score_form_freshness(form_timestamp: datetime | None) -> int
+  - Function: def score_injury_freshness(injury_timestamp: datetime | None) -> int
+  - Function: def score_odds_freshness(odds_timestamp: datetime | None) -> int
+  - Function: def score_form_sample_size(games_count: int) -> int
+
+- Task 5: Implement orchestrator function
+  - Function: async def score_pick(ev_result: EVResult, fixture: Fixture) -> ConfidenceScoreBreakdown
+  - Extract timestamps from fixture and ev_result
+  - Call all individual scoring functions
+  - Calculate total_adjustments and final_confidence with clamping to [0, 100]
+
+- Task 6: Implement batch scoring function
+  - Function: async def apply_confidence_scoring(picks: list[EVResult], fixtures: list[Fixture]) -> list[dict[str, Any]]
+  - Validate inputs (non-empty lists)
+  - For each pick: find corresponding fixture by fixture_id
+  - Log scoring summary: average confidence, min/max, picks by confidence tier
+
+- Task 7: Test timestamp handling in Fixture/EVResult
+  - Verify Fixture model has timestamps for: form_last_updated, injuries_last_checked, odds_timestamp
+  - Create fixture/ev_result factory for testing with different timestamp scenarios
+
+- Task 8: Create unit tests
+  - Create /tests/unit/test_confidence_scorer.py with 50+ test cases
+  - Achieve &gt; 85% code coverage on confidence_scorer module
+
+- Task 9: Create integration test with Story 5.2
+  - Create /tests/integration/test_confidence_scoring_pipeline.py with 15+ test cases
+  - Test full pipeline: picks from 5.2 → confidence scoring
+
+- Task 10: Write module documentation
+  - Module docstring: explain confidence scoring purpose, baseline 75%, adjustments
+  - Document all functions: parameters, return types, examples
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. Create `/src/bet_bot/analysis/edge/confidence_scorer.py` module
+2. Implement `def calculate_base_score() -> int` that returns 75 (baseline confidence)
+3. Implement `def score_form_freshness(form_timestamp: datetime | None) -> int` that returns:
+   - +15 points if form < 24 hours old
+   - +10 points if form 24-48 hours old
+   - -5 points if form > 48 hours old
+   - 0 points if form data missing
+4. Implement `def score_injury_freshness(injury_timestamp: datetime | None) -> int` that returns:
+   - +5 points if injuries < 12 hours old
+   - -10 points if injuries missing or > 12 hours old
+5. Implement `def score_odds_freshness(odds_timestamp: datetime | None) -> int` that returns:
+   - +5 points if odds < 30 minutes old
+   - -5 points if odds 30-60 minutes old
+   - -10 points if odds > 60 minutes old
+6. Implement `def score_form_sample_size(games_count: int) -> int` that returns:
+   - 0 points if games_count >= 10 (already counted in base)
+   - -10 points if games_count < 5
+7. Implement `async def score_pick(ev_result: EVResult, fixture: Fixture) -> dict[str, int]` orchestrator function
+8. Clamp final confidence to [0, 100] range (never < 0%, never > 100%)
+9. Create `ConfidenceScoreBreakdown` Pydantic model to structure scoring results
+10. Implement `async def apply_confidence_scoring(picks: list[EVResult], fixtures: list[Fixture]) -> list[dict[str, Any]]` batch function
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+- path: docs/technical-spec.md
+  title: bet-bot Technical Specification
+  section: Section 4 - Edge Detection Layer
+  snippet: "Confidence Scoring Logic: confidence = base_score(75%) + adjustments for data freshness, clamped to [0, 100]. Feeds into Stake Sizing (Story 6.1) to size bets based on confidence."
+
+- path: docs/data-dictionary.md
+  title: bet-bot Data Dictionary
+  section: Section 8 - Confidence Scoring
+  snippet: "Scoring rules: Start at base_confidence (75%), add points for form freshness (+15 if < 24h), injury completeness (-10 if missing), odds freshness (-10 if > 60min), sample size (-10 if < 5 games), clamp to [0, 100]."
+
+- path: docs/data-dictionary.md
+  title: bet-bot Data Dictionary
+  section: Section 2 - Team Form Data
+  snippet: "last_5_results array of W/D/L, freshness requirement < 24h. Used for form_freshness scoring in confidence scorer (AC #3)."
+
+- path: docs/data-dictionary.md
+  title: bet-bot Data Dictionary
+  section: Section 3 - Injury & Suspension Data
+  snippet: "injury_date and expected_return fields with freshness < 12h. Used for injury_freshness scoring (AC #4). If missing, apply -10 penalty."
+
+- path: docs/data-dictionary.md
+  title: bet-bot Data Dictionary
+  section: Section 5 - Odds Data
+  snippet: "odds_updated_at timestamp with freshness < 1h, odds_age_minutes calculated field. Used for odds_freshness scoring (AC #5)."
+
+- path: docs/sprint-artifacts/5-1-implement-expected-value-calculation.md
+  title: Story 5.1 - Expected Value Calculation
+  section: Story and Models
+  snippet: "EVResult model with ev_percentage field, is_valid flag, and skip_reason. Parent Fixture available for timestamp extraction."
+
+- path: docs/sprint-artifacts/5-2-create-threshold-filter-for-edge-detection.md
+  title: Story 5.2 - Threshold Filter
+  section: Story Overview
+  snippet: "Filters picks by 5% EV threshold. Output: list of EVResult objects with category (RECOMMENDED). Input to confidence_scorer for scoring."
+
+- path: docs/development-stories.md
+  title: Development Stories Document
+  section: Story 5.3 - Implement Confidence Scoring Logic
+  snippet: "Confidence scorer assesses reliability of each pick based on data freshness (form, injuries, odds). Feeds to Stake Sizing (6.1) for bet sizing."
+
+- path: docs/requirements.md
+  title: bet-bot Requirements
+  section: Core Features
+  snippet: "Display confidence score with each pick: 0-100 representing reliability based on data quality and freshness."
+    </docs>
+    <code>
+- path: src/bet_bot/models/fixtures.py
+  kind: module
+  symbol: Fixture
+  reason: Core data model for this story. Contains fixture_id, home_team/away_team with form data, kickoff_time, and will hold timestamps for form/injuries/odds freshness checks (AC #3-5)
+
+- path: src/bet_bot/analysis/edge/ev_calculator.py
+  kind: module
+  symbol: EVResult
+  reason: Input model for confidence scorer (AC #7). Contains ai_probability, odds, ev_percentage, is_valid fields. Parent Fixture available in score_pick context.
+
+- path: src/bet_bot/analysis/edge/threshold_filter.py
+  kind: module
+  symbol: apply_threshold_filter
+  reason: Produces filtered picks (RECOMMENDED category) that feed into apply_confidence_scoring as input list. Dependency for Story 5.3 integration.
+
+- path: src/bet_bot/analysis/edge/__init__.py
+  kind: file
+  symbol: module exports
+  reason: Where confidence_scorer.py functions will be exported for use by Story 5.4 (edge_detection_pipeline) and downstream consumers.
+
+- path: src/bet_bot/models/analysis.py
+  kind: module
+  symbol: AIAnalysis
+  reason: Referenced in Fixture.ai_analysis field. Contains MarketAnalysis with market probabilities used by ev_calculator.
+
+- path: tests/unit/test_ev_calculator.py
+  kind: test file
+  symbol: test examples
+  reason: Pattern reference for unit test structure. Confidence scorer tests (AC #8) should follow similar organization for EV testing patterns.
+
+- path: tests/unit/test_threshold_filter.py
+  kind: test file
+  symbol: test patterns
+  reason: Pattern reference for batch processing test structure (apply_threshold_filter). Confidence scorer batch tests (AC #10) should follow similar patterns.
+
+- path: tests/integration/test_ev_calculation_pipeline.py
+  kind: test file
+  symbol: integration test patterns
+  reason: Shows how to construct realistic Fixture objects with EVResult for testing. Integration tests for confidence scorer (AC #9) should follow this pattern with picks from Story 5.2.
+    </code>
+    <dependencies>
+python:
+  - pydantic: ">=2.0" (for ConfidenceScoreBreakdown model, AC #9)
+  - asyncio: stdlib (for async def score_pick and apply_confidence_scoring, AC #7, #10)
+  - datetime: stdlib (for timezone.utc timestamp handling, for freshness calculations, AC #3-5)
+  - logging: stdlib (for module logger, error handling)
+
+internal:
+  - src/bet_bot/models/fixtures.py::Fixture (AC #7, for timestamp extraction)
+  - src/bet_bot/analysis/edge/ev_calculator.py::EVResult (AC #7, input model for scoring)
+  - Story 5.1 (expected value calculation) - provides EVResult model and fixtures with ev_results
+  - Story 5.2 (threshold filter) - produces filtered picks (recommended) as input to batch scoring
+  - Story 3.3 (data quality scoring) - similar but separate scoring logic (for reference, not import)
+
+frameworks:
+  - Pydantic v2 (BaseModel, field_validator, ConfigDict)
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- Base confidence score is ALWAYS 75 (AC #2): Non-configurable constant, hardcoded starting point
+- Final confidence clamped to [0, 100] (AC #8): Never return < 0 or > 100, use min/max clamping
+- Timestamps MUST be timezone-aware UTC (CLAUDE.md rule): All datetime comparisons use datetime.now(timezone.utc), per Python 3.14+ deprecation rules
+- Use datetime.now(timezone.utc) NOT datetime.utcnow() (deprecated in Python 3.12, removed 3.14)
+- All type hints use modern syntax: list[X], dict[K,V], X | None (NOT List, Dict, Optional) per CLAUDE.md Python 3.14+ rules
+- Pydantic v2 ONLY: Use @field_validator (NOT @validator), ConfigDict (NOT Config class), field_validator with mode="after" for post-validation
+- Module logger at top level: logger = logging.getLogger(__name__), use logger.debug/info/warning/error throughout
+- Graceful degradation on missing timestamps: Missing timestamp → penalty points, NOT exception. Continue processing (AC #4, #5).
+- Error handling per CLAUDE.md: Try/catch per pick in batch processing, continue on failure, log errors, never swallow exceptions silently
+- Timestamp data availability: Fixture model must expose form_last_updated, injuries_last_checked, odds_timestamp fields (or derivable from home_team/away_team/consolidated data)
+- Data dictionary constraints: Form data freshness < 24h (AC #3), Injuries < 12h (AC #4), Odds < 60min triggers rejection (AC #5)
+- Testing: > 85% code coverage required (AC #8), 50+ unit tests, 15+ integration tests (AC #9)
+- Import chain: Import EVResult from bet_bot.analysis.edge.ev_calculator, Fixture from bet_bot.models.fixtures
+  </constraints>
+
+  <interfaces>
+- name: score_form_freshness
+  kind: function signature
+  signature: def score_form_freshness(form_timestamp: datetime | None) -> int
+  description: Calculate form data freshness points. Returns +15 (< 24h), +10 (24-48h), -5 (> 48h), 0 (None)
+
+- name: score_injury_freshness
+  kind: function signature
+  signature: def score_injury_freshness(injury_timestamp: datetime | None) -> int
+  description: Calculate injury data freshness points. Returns +5 (< 12h), -10 (None or > 12h)
+
+- name: score_odds_freshness
+  kind: function signature
+  signature: def score_odds_freshness(odds_timestamp: datetime | None) -> int
+  description: Calculate odds freshness points. Returns +5 (< 30min), -5 (30-60min), -10 (> 60min), 0 (None)
+
+- name: score_form_sample_size
+  kind: function signature
+  signature: def score_form_sample_size(games_count: int) -> int
+  description: Calculate sample size penalty. Returns 0 (>= 10 games), -10 (< 5 games)
+
+- name: calculate_base_score
+  kind: function signature
+  signature: def calculate_base_score() -> int
+  description: Return base confidence score (always 75)
+
+- name: score_pick
+  kind: function signature
+  signature: async def score_pick(ev_result: EVResult, fixture: Fixture) -> ConfidenceScoreBreakdown
+  description: Orchestrate scoring for single pick. Extract timestamps, call all scoring functions, calculate final_confidence with clamping, return ConfidenceScoreBreakdown with breakdown dict.
+
+- name: apply_confidence_scoring
+  kind: function signature
+  signature: async def apply_confidence_scoring(picks: list[EVResult], fixtures: list[Fixture]) -> list[dict[str, Any]]
+  description: Batch scoring function. For each pick find fixture, call score_pick, aggregate results with logging summary (avg confidence, min/max, tiers)
+
+- name: ConfidenceScoreBreakdown
+  kind: Pydantic model
+  signature: BaseModel with fields: base_score: int, form_adjustment: int, injury_adjustment: int, odds_adjustment: int, sample_size_adjustment: int, total_adjustments: int, final_confidence: int, explanation: str
+  description: Structured scoring result with all components and human-readable breakdown. Used as return type for score_pick() (AC #9)
+  </interfaces>
+
+  <tests>
+    <standards>
+Test framework: pytest (from pytest dependency in project)
+Async testing: pytest-asyncio for async def test functions
+Mocking: unittest.mock for Fixture/EVResult fixtures
+Pattern location: tests/unit/test_ev_calculator.py, tests/unit/test_threshold_filter.py show existing test patterns
+Structure: Organize by function (test_score_form_freshness_*, test_score_injury_freshness_*, etc.)
+Assertions: Use pytest assert statements with clear error messages
+Factories: Create Fixture and EVResult factory functions for test data generation
+Coverage: Target > 85% (AC #8), measure with pytest --cov=src/bet_bot/analysis/edge/confidence_scorer
+Edge cases: Boundary conditions (exactly 24h, 12h, 30min), None values, extreme values (0, 100, negative, 200)
+Fixtures: pytest fixtures for mock Fixture/EVResult objects with configurable timestamps
+    </standards>
+    <locations>
+- /tests/unit/test_confidence_scorer.py (new file, AC #8)
+  - 50+ unit tests for individual scoring functions, clamping, explanation generation
+- /tests/integration/test_confidence_scoring_pipeline.py (new file, AC #9)
+  - 15+ tests with real Fixture/EVResult structures from Stories 5.1, 5.2
+  - Test scenarios: all data fresh, mixed freshness, missing data, batch processing
+    </locations>
+    <ideas>
+Test AC #2 (base_score always 75):
+- test_calculate_base_score_returns_75: assert calculate_base_score() == 75
+
+Test AC #3 (form freshness):
+- test_score_form_freshness_fresh_returns_15: form timestamp < 24h old → +15
+- test_score_form_freshness_okay_returns_10: form timestamp 24-48h old → +10
+- test_score_form_freshness_stale_returns_minus5: form timestamp > 48h old → -5
+- test_score_form_freshness_none_returns_0: None timestamp → 0
+- test_score_form_freshness_boundary_exactly_24h: boundary condition at exactly 24h
+- test_score_form_freshness_boundary_exactly_48h: boundary condition at exactly 48h
+
+Test AC #4 (injury freshness):
+- test_score_injury_freshness_fresh_returns_5: injury timestamp < 12h old → +5
+- test_score_injury_freshness_stale_returns_minus10: injury timestamp > 12h old → -10
+- test_score_injury_freshness_none_returns_minus10: None timestamp → -10 (penalized)
+- test_score_injury_freshness_boundary_exactly_12h: boundary at 12h
+
+Test AC #5 (odds freshness):
+- test_score_odds_freshness_fresh_returns_5: odds < 30min old → +5
+- test_score_odds_freshness_okay_returns_minus5: odds 30-60min old → -5
+- test_score_odds_freshness_stale_returns_minus10: odds > 60min old → -10
+- test_score_odds_freshness_none_returns_0: None timestamp → 0
+- test_score_odds_freshness_boundary_exactly_30min: boundary at 30min
+- test_score_odds_freshness_boundary_exactly_60min: boundary at 60min
+
+Test AC #6 (sample size):
+- test_score_form_sample_size_large_returns_0: games_count >= 10 → 0
+- test_score_form_sample_size_small_returns_minus10: games_count < 5 → -10
+- test_score_form_sample_size_medium_returns_0: games_count 5-9 → 0
+- test_score_form_sample_size_boundary_5_games: boundary at 5 games
+- test_score_form_sample_size_boundary_10_games: boundary at 10 games
+
+Test AC #7 (orchestrator):
+- test_score_pick_calculates_all_components: score_pick() calls all 4 functions, sums adjustments
+- test_score_pick_returns_breakdown: Returns ConfidenceScoreBreakdown with all fields
+- test_score_pick_generates_explanation: explanation field is human-readable
+
+Test AC #8 (clamping):
+- test_final_confidence_clamps_below_zero: score < 0 clamps to 0
+- test_final_confidence_clamps_above_100: score > 100 clamps to 100
+- test_final_confidence_normal_range: score in [0, 100] unchanged
+
+Test AC #9 (model):
+- test_confidence_score_breakdown_validates_zero_to_100: validation enforces [0, 100]
+- test_confidence_score_breakdown_calculates_total_adjustments: total_adjustments is sum of adjustments
+
+Test AC #10 (batch processing):
+- test_apply_confidence_scoring_empty_list: empty picks list → empty result
+- test_apply_confidence_scoring_single_pick: one pick → one scored result
+- test_apply_confidence_scoring_multiple_picks: N picks → N scored results with logging
+- test_apply_confidence_scoring_mixed_freshness: various data scenarios in batch
+- test_apply_confidence_scoring_logs_summary: logs average, min, max, tier counts
+
+Integration tests (AC #9):
+- test_confidence_scoring_with_fresh_data: form < 24h, injuries < 12h, odds < 30min → high confidence
+- test_confidence_scoring_with_stale_data: form 48h old, odds > 60min, injuries missing → low confidence
+- test_confidence_scoring_with_real_evresult: use actual EVResult from Story 5.1 structure
+- test_confidence_scoring_tier_distribution: batch of picks produces expected high/medium/low distribution
+- test_confidence_scoring_accuracy: verify explanation matches calculated breakdown
+    </ideas>
+  </tests>
+
+</story-context>

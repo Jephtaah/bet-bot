@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>4-4</storyId>
+    <title>Batch Analyze All Fixtures with OpenAI</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-27T12:00:00Z</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-4-batch-analyze-all-fixtures-with-openai.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>create a batch orchestrator that chains Stories 4.1-4.3</iWant>
+    <soThat>I can analyze all consolidated fixtures end-to-end with OpenAI and prepare them for EV calculation</soThat>
+    <tasks>
+      - Task 1: Review Stories 4.1-4.3 to understand input/output contracts
+      - Task 2: Create batch analyzer module structure
+      - Task 3: Implement main batch analyzer function
+      - Task 4: Implement single fixture analysis orchestration
+      - Task 5: Implement progress tracking and logging
+      - Task 6: Implement pipeline status summary
+      - Task 7: Implement error handling and graceful degradation
+      - Task 8: Implement rate limit handling
+      - Task 9: Implement timeout handling
+      - Task 10: Create helper function for pipeline debugging
+      - Task 11: Implement validation of input fixtures
+      - Task 12: Implement batch processing with asyncio
+      - Task 13: Implement comprehensive logging
+      - Task 14: Write comprehensive unit tests
+      - Task 15: Create integration test with Stories 4.1-4.3
+      - Task 16: Write module docstring and documentation
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. Create `/src/bet_bot/analysis/ai/batch_analyzer.py` module
+2. Implement `async def batch_analyze_all_fixtures(fixtures) -> list[Fixture]` that orchestrates Stories 4.1-4.3
+3. Call `export_prompt_for_api()` from Story 4.1 to build prompts for each fixture
+4. Call `analyze_fixture()` from Story 4.2 to invoke OpenAI API with structured prompts
+5. Call `parse_openai_response()` from Story 4.3 to parse and validate JSON responses
+6. Create pipeline status summary: total analyzed, successful/failed counts, error details
+7. Attach parsed AI analysis to each fixture (replace raw response with structured data)
+8. Return list of fixtures with ai_analysis field populated (or error status if failed)
+9. Handle rate limiting, retries, and timeouts transparently (don't block caller)
+10. Log progress and summary at completion (fixture counts, error summary, token usage)
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>bet-bot Technical Specification</title>
+        <section>3. OpenAI Analysis Layer</section>
+        <snippet>Modules: prompt_builder (Story 4.1), client (Story 4.2), response_parser (Story 4.3). Prompt Strategy: sends JSON with fixture, form, injuries, odds; receives markets array with probabilities and reasoning.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-3-create-response-parser-for-ai-output.md</path>
+        <title>Story 4.3: Create Response Parser for AI Output</title>
+        <section>Key Infrastructure for Reuse - Response Parsing Functions</section>
+        <snippet>parse_openai_response(response_json) parses raw JSON and returns list[MarketAnalysis]. attach_parsed_analysis_to_fixture(fixture, markets) attaches parsed data to fixture. Error handling: never raises exceptions, returns None/empty list on failure.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-3-create-response-parser-for-ai-output.md</path>
+        <title>Story 4.3: Create Response Parser for AI Output</title>
+        <section>Data Models Available</section>
+        <snippet>MarketAnalysis: market_type (str), ai_probability (float 0.0-1.0), reasoning (str), confidence (int 0-100). AIAnalysis: fixture_id (str), markets (list[MarketAnalysis]), analysis_timestamp (datetime), model_used (str).</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-2-integrate-openai-api-client.md</path>
+        <title>Story 4.2: Integrate OpenAI API Client</title>
+        <section>Key Infrastructure for Reuse - Client Functions</section>
+        <snippet>analyze_fixture(fixture) sends fixture to OpenAI, returns fixture with raw ai_analysis. analyze_all_fixtures(fixtures) is batch orchestrator from 4.2. Client handles rate limiting (429), retries (5xx), timeouts (30s).</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-2-integrate-openai-api-client.md</path>
+        <title>Story 4.2: Integrate OpenAI API Client</title>
+        <section>Rate Limiting Strategy</section>
+        <snippet>Story 4.2 client has internal rate limiter (token bucket). Batch analyzer respects those waits transparently. Retry logic in Story 4.2: max 3 attempts on transient failures, exponential backoff.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-2-integrate-openai-api-client.md</path>
+        <title>Story 4.2: Integrate OpenAI API Client</title>
+        <section>Error Handling</section>
+        <snippet>Story 4.2 never raises exceptions. Returns fixture with error_message if analysis fails. Batch analyzer can check fixture.error_message to detect failures. Token usage may be available in fixture metadata for logging.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-1-build-openai-prompt-builder.md</path>
+        <title>Story 4.1: Build OpenAI Prompt Builder</title>
+        <section>Key Infrastructure for Reuse - Prompt Generation</section>
+        <snippet>export_prompt_for_api(fixture) returns dict with "system_prompt" and "user_message". Takes consolidated Fixture with quality_score, form, injuries, odds. Returns structured prompt ready for OpenAI API.</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>bet-bot Data Dictionary</title>
+        <section>Core Data Models</section>
+        <snippet>AIAnalysis model: fixture_id, markets (list[MarketAnalysis]), analysis_timestamp. MarketAnalysis: market_type, ai_probability (0.0-1.0), reasoning, confidence (0-100).</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/prompt_builder.py</path>
+        <kind>module</kind>
+        <symbol>export_prompt_for_api</symbol>
+        <reason>Story 4.1 function - called in batch analyzer pipeline step 1 to build structured prompts for each fixture</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/client.py</path>
+        <kind>module</kind>
+        <symbol>analyze_fixture</symbol>
+        <reason>Story 4.2 function - called in batch analyzer pipeline step 2 to invoke OpenAI API with fixture data</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/client.py</path>
+        <kind>module</kind>
+        <symbol>analyze_all_fixtures</symbol>
+        <reason>Story 4.2 batch function - reference implementation for sequential fixture processing pattern with rate limiting respect</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/response_parser.py</path>
+        <kind>module</kind>
+        <symbol>parse_openai_response</symbol>
+        <reason>Story 4.3 function - called in batch analyzer pipeline step 3 to parse raw OpenAI JSON responses into MarketAnalysis objects</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/response_parser.py</path>
+        <kind>module</kind>
+        <symbol>attach_parsed_analysis_to_fixture</symbol>
+        <reason>Story 4.3 function - called in batch analyzer pipeline step 5 to attach parsed analysis to fixture object</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>module</kind>
+        <symbol>Fixture</symbol>
+        <reason>Pydantic model for fixture - input to batch_analyze_all_fixtures; has fields: fixture_id, home_team, away_team, league, kickoff_time, odds</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/analysis.py</path>
+        <kind>module</kind>
+        <symbol>AIAnalysis</symbol>
+        <reason>Pydantic model for AI analysis output - contains fixture_id, markets (list[MarketAnalysis]), analysis_timestamp; attached to fixture.ai_analysis field</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/analysis.py</path>
+        <kind>module</kind>
+        <symbol>MarketAnalysis</symbol>
+        <reason>Pydantic model for individual market analysis - market_type, ai_probability (0.0-1.0), reasoning, confidence (0-100)</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/__init__.py</path>
+        <kind>module</kind>
+        <symbol>__all__</symbol>
+        <reason>Module exports - will be updated to include batch_analyze_all_fixtures function for public API</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>module</kind>
+        <symbol>APIError</symbol>
+        <reason>Exception hierarchy for API errors - used by Stories 4.1-4.3 for error signaling that batch analyzer must handle gracefully</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="asyncio" kind="stdlib" required="true">Async task orchestration for fixture processing</package>
+        <package name="logging" kind="stdlib" required="true">Progress tracking and error logging</package>
+        <package name="datetime" kind="stdlib" required="true">Timestamp tracking for pipeline execution</package>
+      </python>
+      <internal>
+        <module name="bet_bot.analysis.ai.prompt_builder" reason="Story 4.1 - prompt generation (export_prompt_for_api)"/>
+        <module name="bet_bot.analysis.ai.client" reason="Story 4.2 - OpenAI API calls (analyze_fixture)"/>
+        <module name="bet_bot.analysis.ai.response_parser" reason="Story 4.3 - response parsing (parse_openai_response, attach_parsed_analysis_to_fixture)"/>
+        <module name="bet_bot.models.fixtures" reason="Fixture Pydantic model - input/output type"/>
+        <module name="bet_bot.models.analysis" reason="AIAnalysis and MarketAnalysis models - output structure"/>
+        <module name="bet_bot.config.settings" reason="Config access if needed (e.g., for defaults)"/>
+      </internal>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architectural">
+      <title>Sequential Processing per Fixture</title>
+      <description>Each fixture must be processed through full pipeline: 4.1 (prompt) → 4.2 (analyze) → 4.3 (parse). This respects Story 4.2's internal rate limiting transparently.</description>
+      <impact>Batch analyzer must not add additional parallelization - rely on Story 4.2's rate limiter</impact>
+    </constraint>
+    <constraint type="error-handling">
+      <title>Never Raise Exceptions</title>
+      <description>batch_analyze_all_fixtures() and helper functions must never raise exceptions. All errors must be caught, logged, and marked on fixture object via error_message field.</description>
+      <impact>Error at any stage (4.1 prompt, 4.2 analyze, 4.3 parse) must be logged and fixture must be returned with error_message. Do not block processing of remaining fixtures.</impact>
+    </constraint>
+    <constraint type="api">
+      <title>Depend Only on Public APIs from Stories 4.1-4.3</title>
+      <description>Call only the documented public functions: export_prompt_for_api() from 4.1, analyze_fixture() from 4.2, parse_openai_response() and attach_parsed_analysis_to_fixture() from 4.3. Do not reach into internal helper functions.</description>
+      <impact>Ensures loose coupling and allows 4.1-4.3 implementations to evolve independently</impact>
+    </constraint>
+    <constraint type="data-flow">
+      <title>Fixture Data Transformation Chain</title>
+      <description>Input: Consolidated Fixture from Story 3.3 with quality_score. Output: Same Fixture object with ai_analysis field populated with parsed MarketAnalysis objects (or error_message if failed).</description>
+      <impact>Batch analyzer is "in-place transformer" - modifies fixture.ai_analysis field; does not create new Fixture objects</impact>
+    </constraint>
+    <constraint type="logging">
+      <title>Structured Logging with fixture_id Context</title>
+      <description>All log messages must include fixture_id for traceability. Log at appropriate levels: DEBUG (raw data samples), INFO (progress, summary), WARNING (validation issues), ERROR (critical failures).</description>
+      <impact>Never log full fixture objects or raw API responses; include fixture_id in all messages</impact>
+    </constraint>
+    <constraint type="rate-limiting">
+      <title>Transparent Rate Limit Respect</title>
+      <description>Story 4.2 client has internal rate limiting. Batch analyzer must NOT add additional rate limiting - respect the 4.2 client's waits transparently by awaiting its async calls.</description>
+      <impact>Batch analyzer is sequential (not concurrent) by design to respect 4.2's rate limiter</impact>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>batch_analyze_all_fixtures</name>
+      <kind>async function</kind>
+      <signature>async def batch_analyze_all_fixtures(fixtures: list[Fixture]) -> list[Fixture]</signature>
+      <path>src/bet_bot/analysis/ai/batch_analyzer.py</path>
+      <description>Main orchestrator function. Accepts list of consolidated fixtures. Returns same fixtures with ai_analysis field populated or error_message if analysis failed at any stage. Never raises exceptions.</description>
+      <usage>
+        from bet_bot.analysis.ai import batch_analyze_all_fixtures
+        result_fixtures = await batch_analyze_all_fixtures(consolidated_fixtures)
+      </usage>
+    </interface>
+    <interface>
+      <name>_analyze_single_fixture</name>
+      <kind>async function (internal)</kind>
+      <signature>async def _analyze_single_fixture(fixture: Fixture) -> Fixture</signature>
+      <path>src/bet_bot/analysis/ai/batch_analyzer.py</path>
+      <description>Helper that orchestrates 4.1 → 4.2 → 4.3 pipeline for single fixture. Called by batch_analyze_all_fixtures for each fixture. Handles errors gracefully with try/catch at each stage.</description>
+    </interface>
+    <interface>
+      <name>_create_pipeline_summary</name>
+      <kind>function (internal)</kind>
+      <signature>def _create_pipeline_summary(results: list[Fixture]) -> dict</signature>
+      <path>src/bet_bot/analysis/ai/batch_analyzer.py</path>
+      <description>Generates summary dict from results: {total, successful, failed, success_rate, error_list, tokens_total, cost_total}. Used for logging and display.</description>
+    </interface>
+    <interface>
+      <name>_validate_fixtures_for_analysis</name>
+      <kind>function (internal)</kind>
+      <signature>def _validate_fixtures_for_analysis(fixtures: list[Fixture]) -> bool</signature>
+      <path>src/bet_bot/analysis/ai/batch_analyzer.py</path>
+      <description>Validates input fixture list is non-empty and has required fields. Returns True if valid. Logs warnings for missing fields but continues (graceful degradation).</description>
+    </interface>
+    <interface>
+      <name>_format_error_summary</name>
+      <kind>function (internal)</kind>
+      <signature>def _format_error_summary(fixture: Fixture) -> str</signature>
+      <path>src/bet_bot/analysis/ai/batch_analyzer.py</path>
+      <description>Helper to format error message for display: "Fixture {fixture_id}: {error_message}". Used in logging and error summary output.</description>
+    </interface>
+    <interface>
+      <name>export_prompt_for_api (from Story 4.1)</name>
+      <kind>function</kind>
+      <signature>def export_prompt_for_api(fixture: Fixture) -> dict[str, str]</signature>
+      <path>src/bet_bot/analysis/ai/prompt_builder.py</path>
+      <description>Story 4.1 public API. Returns dict with "system_prompt" and "user_message" keys. Input: Consolidated Fixture with quality_score, form, injuries, odds.</description>
+    </interface>
+    <interface>
+      <name>analyze_fixture (from Story 4.2)</name>
+      <kind>async function</kind>
+      <signature>async def analyze_fixture(fixture: Fixture) -> Fixture</signature>
+      <path>src/bet_bot/analysis/ai/client.py</path>
+      <description>Story 4.2 public API. Calls OpenAI with prompt from 4.1. Returns fixture with ai_analysis field (raw response) or error_message if failed. Handles rate limiting, retries, timeouts internally.</description>
+    </interface>
+    <interface>
+      <name>parse_openai_response (from Story 4.3)</name>
+      <kind>function</kind>
+      <signature>def parse_openai_response(response_json: dict | str) -> list[MarketAnalysis] | None</signature>
+      <path>src/bet_bot/analysis/ai/response_parser.py</path>
+      <description>Story 4.3 public API. Parses raw OpenAI response JSON into validated MarketAnalysis objects. Returns list of markets or None on failure. Handles JSON errors, missing fields, probability validation gracefully.</description>
+    </interface>
+    <interface>
+      <name>attach_parsed_analysis_to_fixture (from Story 4.3)</name>
+      <kind>function</kind>
+      <signature>def attach_parsed_analysis_to_fixture(fixture: Fixture, markets: list[MarketAnalysis]) -> Fixture</signature>
+      <path>src/bet_bot/analysis/ai/response_parser.py</path>
+      <description>Story 4.3 public API. Creates AIAnalysis object with parsed markets and attaches to fixture.ai_analysis field. Includes metadata: parsing_timestamp, parser_version.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing follows bet-bot standards: Use pytest with async fixtures (@pytest.mark.asyncio), mock external dependencies (Stories 4.1-4.3 functions), validate Pydantic models, assert fixture.ai_analysis populated or error_message set. Target 85%+ code coverage for batch_analyzer.py.
+    </standards>
+    <locations>
+      tests/unit/test_batch_analyzer.py - Unit tests for batch orchestrator, single fixture pipeline, progress tracking, error handling
+      tests/integration/test_batch_analysis_pipeline.py - End-to-end tests with realistic fixture data, validates 4.1 → 4.2 → 4.3 chaining, verifies ai_analysis attachment
+    </locations>
+    <ideas>
+      - Unit tests: batch orchestration (valid fixtures → all analyzed), mixed success/failure (both returned with correct counts), empty list (returns empty), single fixture (analyzed correctly)
+      - Unit tests: pipeline chaining (prompt feeds to OpenAI, response feeds to parser, parsed analysis attached), error at each stage (4.1 fails, 4.2 fails, 4.3 fails - all continue)
+      - Unit tests: progress tracking (per-fixture logging), summary generation (correct counts, error list), graceful degradation (no exceptions, return all fixtures)
+      - Integration tests: end-to-end with 5-10 realistic fixtures, verify ai_analysis contains MarketAnalysis objects with valid probabilities/reasoning/confidence, verify success/error counts
+      - Integration tests: mixed success/failure scenarios, verify data integrity through pipeline, verify rate limiting is transparent (no additional delays beyond 4.2)
+    </ideas>
+  </tests>
+</story-context>

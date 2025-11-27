@@ -1,6 +1,6 @@
 # Story 2.2: Integrate API-Football SDK
 
-Status: review
+Status: done
 
 ## Story
 

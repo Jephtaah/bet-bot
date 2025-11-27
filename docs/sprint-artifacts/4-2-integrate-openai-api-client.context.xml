@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="bet-bot/docs/sprint-artifacts/4-2-integrate-openai-api-client.context" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>4-2</storyId>
+    <title>Integrate OpenAI API Client</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/4-2-integrate-openai-api-client.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>create an OpenAI client that calls GPT for analysis</iWant>
+    <soThat>I can get AI probability estimates</soThat>
+    <tasks>
+      <task n="1">Review OpenAI API requirements and integration strategy (AC: #1-#5)</task>
+      <task n="2">Create client module structure (AC: #1)</task>
+      <task n="3">Implement OpenAI client initialization (AC: #2)</task>
+      <task n="4">Implement core analyze_fixture function (AC: #3, #4, #5)</task>
+      <task n="5">Implement retry logic with exponential backoff (AC: #6)</task>
+      <task n="6">Implement rate limiting with client-side token bucket (AC: #7)</task>
+      <task n="7">Implement token counting and logging (AC: #8)</task>
+      <task n="8">Implement timeout handling (AC: #9)</task>
+      <task n="9">Implement error handling and graceful degradation (AC: #10)</task>
+      <task n="10">Implement response parsing to AIAnalysis model (AC: #5)</task>
+      <task n="11">Create helper function to attach analysis to fixture (AC: #3)</task>
+      <task n="12">Create batch analysis orchestrator (AC: #6-#10)</task>
+      <task n="13">Implement comprehensive logging (AC: #6-#8)</task>
+      <task n="14">Write comprehensive unit tests (AC: #1-#10)</task>
+      <task n="15">Integration test with Story 4.1 output (AC: #3-#5)</task>
+      <task n="16">Create configuration for model and cost management (AC: #2, #8)</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Create `/src/bet_bot/analysis/ai/client.py` module</criterion>
+    <criterion id="2">Initialize OpenAI client with API key from config</criterion>
+    <criterion id="3">Implement `async def analyze_fixture(fixture)` function that accepts consolidated fixture data</criterion>
+    <criterion id="4">Send structured prompt to GPT-4 (or GPT-3.5-turbo for cost optimization)</criterion>
+    <criterion id="5">Parse JSON response into `AIAnalysis` model with market probabilities</criterion>
+    <criterion id="6">Add retry logic (max 3 attempts on transient failures, exponential backoff)</criterion>
+    <criterion id="7">Handle rate limiting with client-side token bucket (respect 429 Retry-After header)</criterion>
+    <criterion id="8">Log token usage (input/output tokens) for cost tracking and budget monitoring</criterion>
+    <criterion id="9">Handle timeout (30s max per fixture, fail gracefully)</criterion>
+    <criterion id="10">Mark fixture with error status if OpenAI fails (do not crash entire run)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification - OpenAI Analysis Layer</title>
+        <section>3. OpenAI Analysis Layer (lines 133-166)</section>
+        <snippet>Purpose: Send structured data to OpenAI, get probability estimates. Modules: prompt_builder.py (Story 4.1), client.py (Story 4.2), response_parser.py (Story 4.3). One OpenAI call per fixture, structured JSON input/output, fallback for API failures (mark fixture as "analysis failed").</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/4-1-build-openai-prompt-builder.md</path>
+        <title>Story 4.1: Build OpenAI Prompt Builder</title>
+        <section>Dev Notes and Architecture Alignment</section>
+        <snippet>Story 4.1 provides `export_prompt_for_api(fixture)` which returns dict with "system_prompt" and "user_message" keys, ready for OpenAI integration. This story integrates Story 4.1 output into OpenAI API calls with retry logic, rate limiting, and error handling.</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary - Field Definitions</title>
+        <section>Odds Data (Section 5)</section>
+        <snippet>Defines all odds data fields used in fixtures: bookmaker_name, odds_updated_at, odds_age_minutes, match_result odds, total_goals markets, corners markets. Understanding field structure is essential for validation in AI analysis responses.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>module</kind>
+        <symbol>APIAuthenticationError, APIRateLimitError, APIServerError, OpenAIError</symbol>
+        <reason>Exception hierarchy already defined for API errors. Story 4.2 must reuse APIAuthenticationError, APIRateLimitError, APIServerError, and OpenAIError for consistent error handling per CLAUDE.md standards.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/analysis.py</path>
+        <kind>module</kind>
+        <symbol>AIAnalysis, MarketAnalysis</symbol>
+        <lines>1-150</lines>
+        <reason>Pydantic v2 models for AI analysis output. Story 4.2 must populate these models from OpenAI responses. MarketAnalysis contains market_type, ai_probability (0.0-1.0), reasoning, confidence. AIAnalysis contains fixture_id, markets list, analysis_timestamp.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/data/fetchers/api_football.py</path>
+        <kind>module</kind>
+        <symbol>RateLimiter, get_http_client</symbol>
+        <lines>60-150</lines>
+        <reason>Reference implementation for RateLimiter class and async HTTP client pattern. Story 4.2 must follow same patterns for OpenAI rate limiting and HTTP client management per CLAUDE.md standards.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/prompt_builder.py</path>
+        <kind>module</kind>
+        <symbol>export_prompt_for_api</symbol>
+        <reason>Story 4.1 output (completed, status: review). Provides `export_prompt_for_api(fixture)` that returns dict with "system_prompt" and "user_message" keys. Story 4.2 uses this function to get structured prompt for OpenAI API calls.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/ai/__init__.py</path>
+        <kind>module</kind>
+        <symbol>__all__ exports</symbol>
+        <reason>Must update to export `analyze_fixture` and `analyze_all_fixtures` functions from client.py after implementation.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="openai" version="1.0+" description="Official OpenAI SDK for async API calls"/>
+        <package name="httpx" version="0.24+" description="Async HTTP client (implicit via openai)"/>
+        <package name="tenacity" version="8.0+" description="Retry logic with exponential backoff"/>
+        <package name="pydantic" version="2.0+" description="Data validation models (v2 syntax required)"/>
+        <package name="asyncio" version="builtin" description="Async/await and task management"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Use official `openai.AsyncOpenAI` client (NOT httpx directly). Per CLAUDE.md, modern OpenAI SDK handles retries automatically for transient errors and provides better structured API interactions.</constraint>
+    <constraint type="error-handling">NEVER use custom error handling for API calls. MUST use existing exception hierarchy: APIAuthenticationError (401/403), APIRateLimitError (429), APIServerError (5xx), OpenAIError (OpenAI-specific). See src/bet_bot/exceptions.py.</constraint>
+    <constraint type="retry-pattern">MANDATORY: Use tenacity library @retry decorator for retry logic. Pattern exists in src/bet_bot/data/fetchers/api_football.py. Retry conditions: httpx.TimeoutException, httpx.NetworkError, APIServerError (5xx). Do NOT retry 401/403 or 429 (handle separately). Max 3 attempts with exponential backoff (2s, 4s, 8s).</constraint>
+    <constraint type="rate-limiting">Implement client-side token bucket rate limiter (reference: src/bet_bot/data/fetchers/api_football.py:RateLimiter). Max 500 requests/minute for OpenAI free tier. Respect Retry-After header from 429 responses. Never relay 429 to caller - handle internally with retry.</constraint>
+    <constraint type="async-patterns">Use async/await consistently. asyncio.timeout(30) for timeout enforcement (Python 3.11+). asyncio.gather() for batch processing with return_exceptions=True. Never use blocking calls (time.sleep) - use asyncio.sleep().</constraint>
+    <constraint type="timeout">30s max per fixture analysis. Use asyncio.timeout(30) context manager. On timeout: log ERROR with fixture_id, mark fixture status as "analysis_failed", return fixture with error_message (never raise exception).</constraint>
+    <constraint type="graceful-degradation">Never raise exceptions from analyze_fixture(). On any error: log with context (fixture_id), mark fixture with error status, continue processing other fixtures. Entire run must complete even if one fixture fails.</constraint>
+    <constraint type="validation">MUST validate all inputs using Pydantic v2 models. Response from OpenAI must be parsed into AIAnalysis/MarketAnalysis models. Validate probabilities are floats in [0.0, 1.0]. Validate probability sums for multi-outcome markets (e.g., match_result: home+draw+away ≈ 1.0). Log validation failures at WARNING level (don't fail).</constraint>
+    <constraint type="logging">Never log API keys (not even masked). Never log full fixture data (log summary only). Log at DEBUG: raw prompt (first 300 chars). Log at INFO: fixture summary, token counts, rate limit waits. Log at WARNING: validation failures, approaching rate limits. Log at ERROR: API failures, timeouts, parsing errors.</constraint>
+    <constraint type="token-cost">Track input_tokens + output_tokens from OpenAI response. Calculate cost: (input_tokens * 0.50 + output_tokens * 1.50) / 1M for GPT-3.5-turbo. Log cumulative cost per run. Warn at INFO level if single fixture > $0.10. Warn at WARNING level if cumulative > $5 threshold.</constraint>
+    <constraint type="config">Add to config.yaml: OPENAI_MODEL (default: "gpt-3.5-turbo"), OPENAI_TIMEOUT_SECONDS (default: 30), OPENAI_MAX_RETRIES (default: 3), OPENAI_COST_THRESHOLD (default: 5.0). Validate all config values on startup.</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>OpenAI API - Chat Completions</name>
+      <kind>REST API</kind>
+      <signature>POST https://api.openai.com/v1/chat/completions</signature>
+      <path>N/A (external API)</path>
+      <details>Uses official openai.AsyncOpenAI client to call chat completions endpoint. Request includes system_prompt + user_message from Story 4.1. Response contains JSON with markets array containing type, probabilities, reasoning.</details>
+    </interface>
+    <interface>
+      <name>analyze_fixture</name>
+      <kind>async function</kind>
+      <signature>async def analyze_fixture(fixture: Fixture) -> Fixture</signature>
+      <path>src/bet_bot/analysis/ai/client.py</path>
+      <details>Public API for analyzing single fixture. Accepts consolidated Fixture from Story 3.3. Returns Fixture with ai_analysis field populated (or error_message if failed). Never raises exception.</details>
+    </interface>
+    <interface>
+      <name>analyze_all_fixtures</name>
+      <kind>async function</kind>
+      <signature>async def analyze_all_fixtures(fixtures: list[Fixture]) -> list[Fixture]</signature>
+      <path>src/bet_bot/analysis/ai/client.py</path>
+      <details>Batch orchestrator for multiple fixtures. Iterates sequentially (respects rate limits). Returns list of fixtures with analysis attached or error status. Logs progress and summary.</details>
+    </interface>
+    <interface>
+      <name>export_prompt_for_api</name>
+      <kind>async function</kind>
+      <signature>async def export_prompt_for_api(fixture: Fixture) -> dict[str, str]</signature>
+      <path>src/bet_bot/analysis/ai/prompt_builder.py</path>
+      <details>From Story 4.1 (completed). Returns dict with keys: "system_prompt" (str) and "user_message" (str). Called by Story 4.2 analyze_fixture() to get structured prompt before OpenAI API call.</details>
+    </interface>
+    <interface>
+      <name>Config API</name>
+      <kind>Configuration</kind>
+      <signature>config.OPENAI_API_KEY, config.OPENAI_MODEL, config.OPENAI_TIMEOUT_SECONDS</signature>
+      <path>src/bet_bot/config.py</path>
+      <details>Provides API key and configuration values. OPENAI_API_KEY is required (raises ValueError if missing). OPENAI_MODEL defaults to "gpt-3.5-turbo". OPENAI_TIMEOUT_SECONDS defaults to 30.</details>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Project uses pytest for unit and integration testing. All tests use async fixtures with @pytest.mark.asyncio decorator. Mocking uses unittest.mock.patch and pytest-mock for async functions. Tests must have 85%+ code coverage for client.py. Error cases must be tested explicitly (not raising exceptions). Integration tests must use real Story 4.1 prompt_builder output.
+    </standards>
+    <locations>
+      tests/unit/test_openai_client.py - unit tests for all client functions and retry logic
+      tests/integration/test_prompt_to_analysis.py - integration tests with Story 4.1 output
+    </locations>
+    <ideas>
+      <testGroup>Client Initialization</testGroup>
+      <idea acId="2">Test valid API key → OpenAIClient created successfully</idea>
+      <idea acId="2">Test missing OPENAI_API_KEY → raises ValueError with clear message</idea>
+      <idea acId="2">Test client singleton pattern (second init returns same instance)</idea>
+      <idea acId="2">Test timeout configuration (30s total, 10s connect)</idea>
+
+      <testGroup>analyze_fixture Function</testGroup>
+      <idea acId="3">Test valid fixture → returns fixture with ai_analysis attached</idea>
+      <idea acId="3">Test fixture with missing fixture_id → logs warning, returns None</idea>
+      <idea acId="3">Test missing required fields (teams, league) → logs error, returns error fixture</idea>
+      <idea acId="3">Test fixture from Story 3.3 with quality_score → properly formatted in prompt</idea>
+
+      <testGroup>OpenAI API Integration</testGroup>
+      <idea acId="4,5">Test successful API call → returns Fixture with AIAnalysis</idea>
+      <idea acId="4,5">Test response parsing → JSON response correctly mapped to MarketAnalysis objects</idea>
+      <idea acId="4,5">Test invalid JSON response → logs error, returns error fixture (no exception)</idea>
+      <idea acId="5">Test probabilities validation → values > 1.0 clipped with warning</idea>
+      <idea acId="5">Test probability sum validation → multi-outcome markets (e.g., match_result) sum ≈ 1.0</idea>
+
+      <testGroup>Retry Logic</testGroup>
+      <idea acId="6">Test transient failure (timeout) → retries and succeeds (mocked success after 2 attempts)</idea>
+      <idea acId="6">Test permanent failure (auth error) → no retry, returns error fixture</idea>
+      <idea acId="6">Test max retries exceeded → returns error fixture (doesn't raise)</idea>
+      <idea acId="6">Test exponential backoff → waits 2s, 4s, 8s between retries (verify timing)</idea>
+
+      <testGroup>Rate Limiting</testGroup>
+      <idea acId="7">Test rate limit reached → waits and retries (asyncio.sleep mocked)</idea>
+      <idea acId="7">Test Retry-After header (seconds) → waits exact duration</idea>
+      <idea acId="7">Test Retry-After header (HTTP date) → parses and waits correct duration</idea>
+      <idea acId="7">Test concurrent requests respect token bucket → max 500/min enforced</idea>
+
+      <testGroup>Timeout Handling</testGroup>
+      <idea acId="9">Test 30s timeout enforced → returns error fixture, not exception</idea>
+      <idea acId="9">Test timeout during slow API response → logs ERROR, marks analysis_failed</idea>
+
+      <testGroup>Error Handling</testGroup>
+      <idea acId="10">Test APIAuthenticationError (401) → logs CRITICAL, halts with clear message</idea>
+      <idea acId="10">Test APIRateLimitError (429) → uses rate limiter to wait, retries</idea>
+      <idea acId="10">Test APIServerError (5xx) → uses tenacity retry logic</idea>
+      <idea acId="10">Test JSON parse error → logs ERROR, marks analysis_failed</idea>
+      <idea acId="10">Test unexpected exception → logs EXCEPTION, marks analysis_failed</idea>
+      <idea acId="10">Test entire run continues if one fixture fails → other fixtures still processed</idea>
+
+      <testGroup>Token Cost Tracking</testGroup>
+      <idea acId="8">Test cost calculation for single fixture → (input_tokens * 0.50 + output_tokens * 1.50) / 1M</idea>
+      <idea acId="8">Test cost exceeding $0.10 per fixture → logs WARNING</idea>
+      <idea acId="8">Test cumulative cost tracking → sum across multiple fixtures</idea>
+      <idea acId="8">Test cost threshold warning → logs WARNING when $5 exceeded</idea>
+
+      <testGroup>Batch Analysis</testGroup>
+      <idea acId="6,7,10">Test analyze_all_fixtures with multiple fixtures → processes all sequentially</idea>
+      <idea acId="6,7,10">Test one fixture fails → others continue processing</idea>
+      <idea acId="6,7,10">Test empty fixture list → returns empty list</idea>
+      <idea acId="6,7,10">Test progress logging → "Analyzing fixture X of Y" messages</idea>
+      <idea acId="6,7,10">Test completion summary → "Analyzed X of Y fixtures, Y failures"</idea>
+
+      <testGroup>Integration with Story 4.1</testGroup>
+      <idea acId="3,4,5">Test prompt_to_analysis flow → use export_prompt_for_api() output directly</idea>
+      <idea acId="3,4,5">Test with 3-5 realistic fixtures → verify end-to-end integration</idea>
+      <idea acId="3,4,5">Test response parsing preserves fixture data → original fields unchanged</idea>
+    </ideas>
+  </tests>
+</story-context>

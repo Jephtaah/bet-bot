@@ -12,19 +12,20 @@ Functions:
 
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 def resolve_conflict_by_timestamp(
-    value1: any,
+    value1: Any,
     timestamp1: datetime | None,
     source1: str,
-    value2: any,
+    value2: Any,
     timestamp2: datetime | None,
     source2: str,
     field_name: str
-) -> tuple[any, str]:
+) -> tuple[Any, str]:
     """
     Resolve conflict between two data sources by preferring fresher data.
 
@@ -94,7 +95,7 @@ def track_source_lineage(
     field_name: str,
     source: str,
     timestamp: datetime | None = None
-) -> dict[str, any]:
+) -> dict[str, Any]:
     """
     Create source lineage entry for audit trail.
 
@@ -133,10 +134,10 @@ def track_source_lineage(
 
 
 def merge_optional_list(
-    list1: list | None,
-    list2: list | None,
+    list1: list[Any] | None,
+    list2: list[Any] | None,
     field_name: str
-) -> list:
+) -> list[Any]:
     """
     Safely merge two optional lists, preferring non-empty ones.
 

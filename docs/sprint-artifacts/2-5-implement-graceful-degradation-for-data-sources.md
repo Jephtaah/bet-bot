@@ -1,6 +1,6 @@
 # Story 2.5: Implement Graceful Degradation for Data Sources
 
-Status: review
+Status: done
 
 ## Story
 

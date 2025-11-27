@@ -84,6 +84,37 @@ class Config(BaseModel):
         description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
     )
 
+    # OpenAI-specific settings
+    openai_model: str = Field(
+        default="gpt-3.5-turbo",
+        alias="OPENAI_MODEL",
+        description="OpenAI model to use (gpt-3.5-turbo or gpt-4)"
+    )
+
+    openai_timeout_seconds: int = Field(
+        default=30,
+        alias="OPENAI_TIMEOUT_SECONDS",
+        description="Timeout for OpenAI API calls (seconds)",
+        ge=5,
+        le=120
+    )
+
+    openai_max_retries: int = Field(
+        default=3,
+        alias="OPENAI_MAX_RETRIES",
+        description="Maximum retry attempts for transient OpenAI errors",
+        ge=1,
+        le=10
+    )
+
+    openai_cost_threshold: float = Field(
+        default=5.0,
+        alias="OPENAI_COST_THRESHOLD",
+        description="Cost threshold warning for single run (USD)",
+        ge=0.01,
+        le=100.0
+    )
+
     @field_validator("openai_api_key", "api_football_key")
     @classmethod
     def validate_required_keys(cls, v: str, info: ValidationInfo) -> str:
@@ -112,6 +143,31 @@ class Config(BaseModel):
             )
 
         return v.strip()
+
+    @field_validator("openai_model")
+    @classmethod
+    def validate_openai_model(cls, v: str) -> str:
+        """
+        Validate OpenAI model is a supported option.
+
+        Args:
+            v: The model name
+
+        Returns:
+            The validated model name
+
+        Raises:
+            ValueError: If model is not supported
+        """
+        valid_models = ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"]
+        v_lower = v.lower()
+
+        if v_lower not in valid_models:
+            raise ValueError(
+                f"openai_model must be one of {valid_models}, got: {v}"
+            )
+
+        return v_lower
 
     @field_validator("log_level")
     @classmethod

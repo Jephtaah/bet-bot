@@ -1320,6 +1320,103 @@ def apply_operation(
 
 ---
 
+### 2.5 Function Return Types and Generic Type Parameters - MANDATORY
+
+**CRITICAL (ZERO TOLERANCE)**:
+- ALWAYS add explicit return type annotations to EVERY function
+- ALWAYS use `None` as return type for functions with no return value
+- ALWAYS add type parameters to generic types: `list[X]`, `dict[K, V]`, etc.
+- NEVER use bare `list`, `dict`, `tuple`, `set` without type parameters
+- ALWAYS use `Any` (capitalized) from `typing`, NEVER lowercase `any`
+- NEVER pass `Any | None` to parameters expecting `str` without explicit conversion
+
+**EXAMPLES**:
+
+**Correct - Functions with return types**:
+```python
+# ✓ Explicit return type
+def version_callback(value: bool) -> None:
+    if value:
+        print("version 1.0")
+        raise SystemExit()
+
+# ✓ Return types on async functions
+async def fetch_fixtures(date: str) -> list[Fixture]:
+    return []
+
+# ✓ Optional return type
+async def fetch_form(team_id: str) -> TeamForm | None:
+    return None
+
+# ✓ Generic with type parameters
+def merge_lists(
+    list1: list[str] | None,
+    list2: list[str] | None
+) -> list[str]:
+    return []
+```
+
+**WRONG - Missing return types**:
+```python
+# ❌ FORBIDDEN - no return type
+def version_callback(value: bool):
+    if value:
+        print("version 1.0")
+
+# ❌ FORBIDDEN - bare list without type parameter
+def fetch_fixtures() -> list:
+    return []
+
+# ❌ FORBIDDEN - bare dict
+def process() -> dict:
+    return {}
+
+# ❌ FORBIDDEN - lowercase any (typo)
+def process(value: any) -> any:
+    return value
+```
+
+**Type Parameter Requirements**:
+```python
+# ❌ FORBIDDEN - bare generic types
+result: list = []
+data: dict = {}
+pair: tuple = (1, 2)
+items: set = {1, 2}
+
+# ✓ CORRECT - all with type parameters
+result: list[str] = []
+data: dict[str, int] = {}
+pair: tuple[int, int] = (1, 2)
+items: set[str] = {"a", "b"}
+```
+
+**Handling Any | None in Functions**:
+```python
+# Problem: raw_fixture.get('league_id') returns Any | None
+# But League expects str
+
+# ❌ WRONG - passes Any | None to str parameter
+league = League(
+    league_id=raw_fixture.get('league_id'),  # Type error!
+    league_name=raw_fixture.get('league_name')
+)
+
+# ✓ CORRECT - explicit conversion
+league = League(
+    league_id=str(raw_fixture.get('league_id', '')),
+    league_name=str(raw_fixture.get('league_name', ''))
+)
+
+# ✓ CORRECT - extract with type hint
+league_id: str = raw_fixture.get('league_id', '')
+if not league_id:
+    raise ValueError("league_id required")
+league = League(league_id=league_id, league_name=...)
+```
+
+---
+
 ### 3. String Formatting - CONSISTENT STYLE
 
 **CRITICAL (ZERO TOLERANCE)**:
@@ -1612,6 +1709,10 @@ Before committing ANY code, verify:
 - [ ] Are secrets never logged?
 - [ ] **NO `datetime.utcnow()` - use `datetime.now(timezone.utc)`**
 - [ ] **NO old-style type hints - use `list[X]` and `X | None`**
+- [ ] **All functions have explicit return type annotations (including `-> None`)**
+- [ ] **All generic types have type parameters (`list[T]`, `dict[K,V]`, etc.)**
+- [ ] **NO lowercase `any` - use capitalized `Any` from typing**
+- [ ] **Explicit conversion when passing `Any | None` to `str` parameters**
 - [ ] **NO `@validator` - use `@field_validator` (Pydantic v2)**
 - [ ] **NO bare except clauses - be specific with exceptions**
 - [ ] **NO deprecated modules (distutils, asyncore, imp, etc.)**

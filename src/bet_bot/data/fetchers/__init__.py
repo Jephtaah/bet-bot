@@ -12,7 +12,7 @@ All fetchers use async/await patterns for parallel data retrieval.
 
 import asyncio
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from bet_bot.data.fetchers.api_football import (
     fetch_fixtures,
@@ -27,7 +27,7 @@ from bet_bot.exceptions import (
     APIServerError,
     ScraperError,
 )
-from bet_bot.models import TeamForm
+from bet_bot.models import Fixture, Injury, TeamForm
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ async def fetch_team_form_with_fallback(
     league_id: str,
     team_name: str,
     league: str
-) -> Optional[TeamForm]:
+) -> TeamForm | None:
     """
     Fetch team form with API-Football primary, ESPN scraper backup.
 
@@ -110,9 +110,9 @@ async def fetch_team_form_with_fallback(
 
 
 async def fetch_all_data(
-    fixture_date: Optional[str] = None,
-    leagues: Optional[list[str]] = None
-) -> Optional[dict[str, Any]]:
+    fixture_date: str | None = None,
+    leagues: list[str] | None = None
+) -> dict[str, Any] | None:
     """
     Fetch data from all sources with graceful degradation and fallback logic.
 
@@ -155,15 +155,15 @@ async def fetch_all_data(
 
     # Initialize result structure with all required keys
     result: dict[str, Any] = {
-        "fixtures": [],
-        "form_data": {},
-        "injuries": {},
-        "odds": {},
-        "h2h": {}
+        "fixtures": list[Fixture]([]),
+        "form_data": dict[str, TeamForm]({}),
+        "injuries": dict[str, Any]({}),
+        "odds": dict[str, Any]({}),
+        "h2h": dict[str, Any]({})
     }
 
     # Track which sources succeeded/failed for logging
-    sources_used = {
+    sources_used: dict[str, Any] = {
         "api_football": {"fixtures": False, "form": False, "injuries": False, "odds": False, "h2h": False},
         "espn_form": False
     }
@@ -171,7 +171,7 @@ async def fetch_all_data(
     # ========== PHASE 1: Fetch Fixtures ==========
     try:
         logger.info("Fetching fixtures from API-Football")
-        fixtures = await fetch_fixtures(date=fixture_date, league=None)
+        fixtures = await fetch_fixtures(date=fixture_date or "", league_id=None)
 
         if fixtures:
             result["fixtures"] = fixtures
@@ -209,7 +209,7 @@ async def fetch_all_data(
     logger.info(f"Fetching form data for {len(result['fixtures'])} teams")
     form_semaphore = asyncio.Semaphore(5)  # Limit ESPN scraper concurrency
 
-    async def fetch_form_for_fixture(fixture: Any) -> tuple[str, Optional[TeamForm], Optional[TeamForm]]:
+    async def fetch_form_for_fixture(fixture: Fixture) -> tuple[str, TeamForm | None, TeamForm | None]:
         """Fetch form for both home and away teams in a fixture."""
         home_form = None
         away_form = None
@@ -217,28 +217,28 @@ async def fetch_all_data(
         # Home team form
         try:
             home_form = await fetch_team_form_with_fallback(
-                team_id=fixture.home_team_id,
-                league_id=fixture.league_id,
-                team_name=fixture.home_team_name,
-                league=fixture.league_name
+                team_id=fixture.home_team.id,
+                league_id=fixture.league.league_id,
+                team_name=fixture.home_team.name,
+                league=fixture.league.league_name
             )
             if home_form:
                 sources_used["api_football"]["form"] = True
         except Exception as e:
-            logger.warning(f"Failed to fetch form for home team {fixture.home_team_name}: {str(e)}")
+            logger.warning(f"Failed to fetch form for home team {fixture.home_team.name}: {str(e)}")
 
         # Away team form
         try:
             away_form = await fetch_team_form_with_fallback(
-                team_id=fixture.away_team_id,
-                league_id=fixture.league_id,
-                team_name=fixture.away_team_name,
-                league=fixture.league_name
+                team_id=fixture.away_team.id,
+                league_id=fixture.league.league_id,
+                team_name=fixture.away_team.name,
+                league=fixture.league.league_name
             )
             if away_form:
                 sources_used["api_football"]["form"] = True
         except Exception as e:
-            logger.warning(f"Failed to fetch form for away team {fixture.away_team_name}: {str(e)}")
+            logger.warning(f"Failed to fetch form for away team {fixture.away_team.name}: {str(e)}")
 
         return fixture.fixture_id, home_form, away_form
 
@@ -249,7 +249,7 @@ async def fetch_all_data(
 
         form_count = 0
         for form_result in form_results:
-            if isinstance(form_result, Exception):
+            if isinstance(form_result, BaseException):
                 logger.warning(f"Form fetch task failed: {str(form_result)}")
                 continue
 
@@ -269,7 +269,7 @@ async def fetch_all_data(
     # ========== PHASE 3: Fetch Injuries ==========
     logger.info(f"Fetching injury data for {len(result['fixtures'])} teams")
 
-    async def fetch_injuries_for_team(team_id: str, team_name: str) -> tuple[str, list]:
+    async def fetch_injuries_for_team(team_id: str, team_name: str) -> tuple[str, Injury | None]:
         """Fetch injuries for a team."""
         try:
             injuries = await fetch_injuries(team_id)
@@ -279,13 +279,13 @@ async def fetch_all_data(
         except Exception as e:
             logger.warning(f"Failed to fetch injuries for team {team_name} ({team_id}): {str(e)}")
 
-        return team_id, []
+        return team_id, None
 
     # Collect unique teams from fixtures
     team_ids = set()
     for fixture in result["fixtures"]:
-        team_ids.add((fixture.home_team_id, fixture.home_team_name))
-        team_ids.add((fixture.away_team_id, fixture.away_team_name))
+        team_ids.add((fixture.home_team.id, fixture.home_team.name))
+        team_ids.add((fixture.away_team.id, fixture.away_team.name))
 
     try:
         injury_tasks = [fetch_injuries_for_team(tid, tname) for tid, tname in team_ids]
@@ -293,7 +293,7 @@ async def fetch_all_data(
 
         injuries_count = 0
         for injury_result in injury_results:
-            if isinstance(injury_result, Exception):
+            if isinstance(injury_result, BaseException):
                 logger.warning(f"Injury fetch task failed: {str(injury_result)}")
                 continue
 
@@ -310,7 +310,7 @@ async def fetch_all_data(
     # ========== PHASE 4: Fetch Odds ==========
     logger.info(f"Fetching odds for {len(result['fixtures'])} fixtures")
 
-    async def fetch_odds_for_fixture(fixture_id: str) -> tuple[str, Optional[Any]]:
+    async def fetch_odds_for_fixture(fixture_id: str) -> tuple[str, Any | None]:
         """Fetch odds for a fixture."""
         try:
             odds = await fetch_odds(fixture_id)
@@ -328,7 +328,7 @@ async def fetch_all_data(
 
         odds_count = 0
         for odds_result in odds_results:
-            if isinstance(odds_result, Exception):
+            if isinstance(odds_result, BaseException):
                 logger.warning(f"Odds fetch task failed: {str(odds_result)}")
                 continue
 
