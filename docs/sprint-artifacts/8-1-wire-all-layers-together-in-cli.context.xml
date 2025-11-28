@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>8</epicId>
+    <storyId>1</storyId>
+    <title>Wire All Layers Together in CLI</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-28</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/8-1-wire-all-layers-together-in-cli.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>As a developer</asA>
+    <iWant>to connect all layers into the main `analyze` command</iWant>
+    <soThat>the full pipeline runs end-to-end</soThat>
+    <tasks>
+      - [ ] Task 1: Review requirements and architecture (AC: #1-#12)
+      - [ ] Task 2: Plan CLI integration flow (AC: #2, #3)
+      - [ ] Task 3: Create main CLI integration function (AC: #2, #3, #7)
+      - [ ] Task 4: Implement Phase 1 - Data Fetching (AC: #3, #5, #12)
+      - [ ] Task 5: Implement Phase 2 - Data Consolidation (AC: #3, #5, #12)
+      - [ ] Task 6: Implement Phase 3 - AI Analysis (AC: #3, #5, #12)
+      - [ ] Task 7: Implement Phase 4 - Edge Detection (AC: #3, #5, #12)
+      - [ ] Task 8: Implement Phase 5 - Stake Sizing (AC: #3, #5, #12)
+      - [ ] Task 9: Implement Phase 6 - Display & Output (AC: #3, #5, #8, #9, #12)
+      - [ ] Task 10: Implement error handling and display (AC: #6, #8)
+      - [ ] Task 11: Implement CLI argument parsing (AC: #4, #10, #11)
+      - [ ] Task 12: Implement timing and logging (AC: #5, #12)
+      - [ ] Task 13: Create unit tests (AC: #1-#12)
+      - [ ] Task 14: Create integration tests (AC: #1-#12)
+      - [ ] Task 15: Manual testing and validation (AC: #1-#12)
+      - [ ] Task 16: Documentation and integration points (AC: #1-#12)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Import all modules into CLI command (fetch, consolidate, analyze, edge, stake, render)
+    2. Execute pipeline in order: fetch → consolidate → analyze → edge → stake → render
+    3. Pass data between layers without errors or data loss
+    4. Accept bankroll from CLI argument (--bankroll, required, positive float)
+    5. Log execution time for each phase (fetch, consolidate, analyze, edge, stake, render)
+    6. Handle exceptions at top level without crashing CLI
+    7. Return proper exit codes (0 success, 1 error)
+    8. Integrate error handler display from Story 7.3 for user-friendly error messages
+    9. Integrate formatter and renderer from Stories 7.1-7.2 for output display
+    10. Support optional --threshold flag for EV threshold override (default 5%)
+    11. Support optional --league flag to filter fixtures by league
+    12. Verify all data flows correctly through each layer with logging
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification</title>
+        <section>High-Level Flow, System Architecture, Module Breakdown, Error Handling Strategy</section>
+        <snippet>Pipeline sequence: User input → Data fetch → Consolidation → OpenAI → Edge detection → Display. Error handling: Graceful degradation (continue with partial data when possible). Performance: Total runtime target &lt; 2 minutes for 20-30 fixtures. Logging: Track each phase's execution time and data quality.</snippet>
+      </doc>
+      <doc>
+        <path>docs/requirements.md</path>
+        <title>Requirements Document</title>
+        <section>User Stories & Acceptance Criteria, Success Metrics, Constraints & Requirements</section>
+        <snippet>Tool identifies current date/time at runtime. Pulls all fixtures for today. Consolidates fixture data. Handles API failures gracefully. Analysis scope: Same-day matches ONLY. Execution model: Batch processing, on-demand. Analysis speed: Complete in &lt; 2 minutes for typical fixture volume. Edge threshold: 5% minimum EV for recommendation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/7-1-create-terminal-formatter-for-picks.md</path>
+        <title>Story 7.1: Terminal Formatter</title>
+        <section>Implementation Summary, Main Function, Display Output</section>
+        <snippet>Formatter returns Rich-formatted table string with columns: Fixture, Market, AI Prob, Implied Prob, EV, Confidence, Stake. Function signature: format_picks_for_display(picks: list[Pick]) → str. Handles empty picks with user-friendly message. Includes summary footer with statistics (picks count, avg EV, avg confidence, total stake, EV range).</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/7-2-implement-results-renderer.md</path>
+        <title>Story 7.2: Results Renderer</title>
+        <section>Implementation Summary, State Handlers, Output States</section>
+        <snippet>Renders final analysis results with 5 states: PICKS_FOUND (green success), NO_PICKS_AVAILABLE (neutral), NO_MATCHES_TODAY (info), ERROR (red failure), DEGRADED (yellow warning). Function signature: async render_analysis_results(picks: list[Pick] | None, bankroll: float, data_quality: dict) → str. Integrates formatter output, adds data quality notes and next steps guidance.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/7-3-create-error-display-handler.md</path>
+        <title>Story 7.3: Error Display Handler</title>
+        <section>Implementation Summary, Error Categories, User-Friendly Messages</section>
+        <snippet>Categorizes errors into 5 types: API (401/403/404/429/5xx), Network (timeout/connection), Validation (Pydantic), Configuration (missing keys), System (permissions/disk). Function signature: display_error(error: Exception, context: dict | None) → str. Returns user-friendly messages with actionable guidance. Logs full error details while showing simplified user message.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>src/bet_bot/cli/main.py</path>
+        <kind>CLI entry point</kind>
+        <symbol>analyze command (TO BE IMPLEMENTED)</symbol>
+        <lines>N/A - file needs creation/update with analyze command</lines>
+        <reason>Main CLI command that orchestrates entire pipeline. This story implements the core logic here.</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/data/fetchers/__init__.py</path>
+        <kind>module</kind>
+        <symbol>fetch_all_data()</symbol>
+        <lines>API reference</lines>
+        <reason>Phase 1: Data fetching. Story imports and calls this to get raw fixtures from all sources (API-Football, ESPN, FlashScore, Odds-API).</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/data/consolidation/__init__.py</path>
+        <kind>module</kind>
+        <symbol>consolidate_fixtures()</symbol>
+        <lines>API reference</lines>
+        <reason>Phase 2: Data consolidation. Normalizes, validates freshness, merges data from multiple sources. Story calls this after Phase 1.</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/analysis/ai/batch_analyzer.py</path>
+        <kind>analyzer</kind>
+        <symbol>analyze_all_fixtures()</symbol>
+        <lines>API reference</lines>
+        <reason>Phase 3: AI Analysis. Calls OpenAI for each fixture to estimate probabilities. Story calls this after Phase 2.</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/analysis/edge/pipeline.py</path>
+        <kind>pipeline</kind>
+        <symbol>detect_edges()</symbol>
+        <lines>API reference</lines>
+        <reason>Phase 4: Edge Detection. Calculates EV, applies confidence scoring, filters by threshold. Story calls this after Phase 3.</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/analysis/stakes/stake_calculator.py</path>
+        <kind>calculator</kind>
+        <symbol>calculate_stakes()</symbol>
+        <lines>API reference</lines>
+        <reason>Phase 5: Stake Sizing. Recommends stake sizes based on bankroll, EV, and confidence. Story calls this after Phase 4.</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/display/formatter.py</path>
+        <kind>formatter</kind>
+        <symbol>format_picks_for_display()</symbol>
+        <lines>Story 7.1</lines>
+        <reason>Phase 6a: Display formatting. Converts Pick list to Rich-formatted table. Story imports and uses this for output formatting.</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/display/renderer.py</path>
+        <kind>renderer</kind>
+        <symbol>render_analysis_results()</symbol>
+        <lines>Story 7.2</lines>
+        <reason>Phase 6b: Results rendering. Wraps formatter output with state-aware header, summary, data quality notes, next steps. Story imports and uses this for final output.</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/display/error_handler.py</path>
+        <kind>error handler</kind>
+        <symbol>display_error()</symbol>
+        <lines>Story 7.3</lines>
+        <reason>Error display. Formats exceptions into user-friendly messages. Story catches exceptions and calls this to display helpful error info.</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>exceptions</kind>
+        <symbol>APIError, ValidationError, BetBotError</symbol>
+        <lines>Exception hierarchy</lines>
+        <reason>Exception classes used throughout pipeline. Story catches and handles these in top-level error handler.</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/utils/logging.py</path>
+        <kind>logging utility</kind>
+        <symbol>setup_logging(), logger</symbol>
+        <lines>Logging setup</lines>
+        <reason>Logging infrastructure. Story uses this for phase timing and debug logging. Imported from Story 1.5.</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>data model</kind>
+        <symbol>Fixture, Pick</symbol>
+        <lines>Pydantic models</lines>
+        <reason>Data structures passed between layers. Story works with these models through entire pipeline.</reason>
+      </file>
+      <file>
+        <path>src/bet_bot/config/settings.py</path>
+        <kind>configuration</kind>
+        <symbol>Config class, environment variables</symbol>
+        <lines>Configuration source</lines>
+        <reason>API keys and configuration. Story uses Config to get OPENAI_API_KEY and API_FOOTBALL_KEY.</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="asyncio" version="built-in">
+          <purpose>Async task orchestration for pipeline execution. Native Python async/await support.</purpose>
+        </package>
+        <package name="typer" version="required">
+          <purpose>CLI framework for argument parsing. Already in requirements.txt from Story 1.3.</purpose>
+        </package>
+        <package name="rich" version="required">
+          <purpose>Terminal formatting. Already in requirements.txt, used by formatter (Story 7.1) and renderer (Story 7.2).</purpose>
+        </package>
+        <package name="pydantic" version="required">
+          <purpose>Data validation. Already in requirements.txt, provides model validation for Fixture and Pick objects.</purpose>
+        </package>
+        <package name="httpx" version="required">
+          <purpose>Async HTTP client. Already in requirements.txt, used by data fetchers.</purpose>
+        </package>
+        <package name="openai" version="required">
+          <purpose>OpenAI API client. Already in requirements.txt, used by AI analysis layer.</purpose>
+        </package>
+        <package name="time" version="built-in">
+          <purpose>Phase timing measurements. Use time.perf_counter() for accurate phase duration tracking.</purpose>
+        </package>
+      </python>
+
+      <frameworks>
+        <framework name="Python 3.10+">
+          <purpose>Async support, type hints, walrus operator. Project requires Python 3.10 or higher.</purpose>
+        </framework>
+        <framework name="Typer CLI">
+          <purpose>CLI argument parsing and command registration. Already established pattern from Story 1.3.</purpose>
+        </framework>
+        <framework name="Pydantic v2">
+          <purpose>Data validation and serialization. All models (Fixture, Pick, AIAnalysis) use Pydantic.</purpose>
+        </framework>
+        <framework name="Async/Await">
+          <purpose>Concurrent operations. Pipeline must support concurrent data fetching and analysis.</purpose>
+        </framework>
+      </frameworks>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <category>Architecture</category>
+      <description>Pipeline execution order is MANDATORY: fetch → consolidate → analyze → edge → stake → render. Data flows sequentially through layers without circular dependencies.</description>
+      <source>Story 8.1 AC#2, Technical Spec High-Level Flow</source>
+    </constraint>
+    <constraint>
+      <category>Error Handling</category>
+      <description>Critical errors (auth failure, no fixtures) halt pipeline. Degradation errors (stale data, missing injuries) continue with flag. Individual errors (single fixture fails) skip item but continue. Top-level catch prevents CLI crash.</description>
+      <source>Technical Spec Error Handling Strategy, Story 8.1 AC#6</source>
+    </constraint>
+    <constraint>
+      <category>Exit Codes</category>
+      <description>Return exit code 0 for success (any output state: picks found, no picks, no matches). Return exit code 1 for critical error (API auth failed, exception unhandled). Graceful degradation states (partial data loss) return 0.</description>
+      <source>Story 8.1 AC#7</source>
+    </constraint>
+    <constraint>
+      <category>Performance</category>
+      <description>Total pipeline execution time must be &lt; 2 minutes for typical fixture volume (20-30 fixtures). Each phase should be timing-measured for optimization. Async I/O prevents blocking on network calls.</description>
+      <source>Requirements AC#1, Technical Spec Performance & Scaling</source>
+    </constraint>
+    <constraint>
+      <category>CLI Arguments</category>
+      <description>--bankroll is REQUIRED (float, positive, min=$1). --threshold is OPTIONAL (float, default 5.0%, range 0-100%). --league is OPTIONAL (string, optional league filter). All inputs validated before pipeline execution.</description>
+      <source>Story 8.1 AC#4, AC#10, AC#11</source>
+    </constraint>
+    <constraint>
+      <category>Display</category>
+      <description>Use formatter (Story 7.1) for pick table. Use renderer (Story 7.2) for final output with state awareness. Use error_handler (Story 7.3) for exception display. All output goes to terminal via Rich console.</description>
+      <source>Story 8.1 AC#8, AC#9</source>
+    </constraint>
+    <constraint>
+      <category>Data Freshness</category>
+      <description>Consolidation layer validates: odds must be &lt;1h old, injuries &lt;12h old, form &lt;24h old. Stale data flags confidence reduction, not pipeline halt. Validation errors (required field missing) halt with error.</description>
+      <source>Requirements Data Freshness Requirements, Technical Spec Data Quality Rules</source>
+    </constraint>
+    <constraint>
+      <category>Threshold Enforcement</category>
+      <description>EV threshold (default 5%) is NON-NEGOTIABLE. Edge detection must filter picks with EV &lt; threshold. CLI --threshold override must be ≥0% and ≤100%. Threshold failure returns NO_PICKS state, not error.</description>
+      <source>Requirements US#5, Story 8.1 AC#10</source>
+    </constraint>
+    <constraint>
+      <category>Module Dependencies</category>
+      <description>All layer modules must be importable without circular dependencies. CLI only imports public APIs from each layer. No private _impl modules exposed.</description>
+      <source>Story 8.1 AC#1, Technical Spec Module Breakdown</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>fetch_all_data()</name>
+      <kind>async function</kind>
+      <signature>async def fetch_all_data() → dict[str, Any]</signature>
+      <path>src/bet_bot/data/fetchers/__init__.py</path>
+      <description>Returns dict with keys: 'fixtures' (list of raw fixture objects), optional error tracking for degraded sources. Called as Phase 1 in pipeline.</description>
+    </interface>
+    <interface>
+      <name>consolidate_fixtures()</name>
+      <kind>async function</kind>
+      <signature>async def consolidate_fixtures(raw_data: dict) → tuple[list[Fixture], dict]</signature>
+      <path>src/bet_bot/data/consolidation/__init__.py</path>
+      <description>Returns tuple: (consolidated Fixture list, data_quality dict tracking success/failure of each source). Called as Phase 2 in pipeline.</description>
+    </interface>
+    <interface>
+      <name>analyze_all_fixtures()</name>
+      <kind>async function</kind>
+      <signature>async def analyze_all_fixtures(fixtures: list[Fixture]) → list[Fixture]</signature>
+      <path>src/bet_bot/analysis/ai/batch_analyzer.py</path>
+      <description>Returns list of Fixture objects with AIAnalysis added to each. Handles individual fixture failures gracefully (marks as failed, continues). Called as Phase 3 in pipeline.</description>
+    </interface>
+    <interface>
+      <name>detect_edges()</name>
+      <kind>function</kind>
+      <signature>def detect_edges(fixtures: list[Fixture], threshold: float = 5.0, league_filter: str | None = None) → list[Pick]</signature>
+      <path>src/bet_bot/analysis/edge/pipeline.py</path>
+      <description>Returns list of Pick objects meeting EV threshold. Applies confidence scoring. Supports optional league filtering. Called as Phase 4 in pipeline.</description>
+    </interface>
+    <interface>
+      <name>calculate_stakes()</name>
+      <kind>function</kind>
+      <signature>def calculate_stakes(picks: list[Pick], bankroll: float) → list[Pick]</signature>
+      <path>src/bet_bot/analysis/stakes/stake_calculator.py</path>
+      <description>Returns list of Pick objects with recommended_stake populated. Uses formula: bankroll × (EV_pct * 0.1) × (confidence/100). Called as Phase 5 in pipeline.</description>
+    </interface>
+    <interface>
+      <name>format_picks_for_display()</name>
+      <kind>function</kind>
+      <signature>def format_picks_for_display(picks: list[Pick] | None) → str</signature>
+      <path>src/bet_bot/display/formatter.py</path>
+      <description>Returns Rich-formatted table string with columns: Fixture, Market, AI Prob, Implied Prob, EV, Confidence, Stake. Handles empty picks with helpful message. Called as Phase 6a in pipeline.</description>
+    </interface>
+    <interface>
+      <name>render_analysis_results()</name>
+      <kind>async function</kind>
+      <signature>async def render_analysis_results(picks: list[Pick] | None, bankroll: float, data_quality: dict) → str</signature>
+      <path>src/bet_bot/display/renderer.py</path>
+      <description>Returns final formatted output string with state-aware header, formatted picks (via formatter), summary stats, data quality notes, next steps. Called as Phase 6b in pipeline.</description>
+    </interface>
+    <interface>
+      <name>display_error()</name>
+      <kind>function</kind>
+      <signature>def display_error(error: Exception, context: dict | None = None) → str</signature>
+      <path>src/bet_bot/display/error_handler.py</path>
+      <description>Returns formatted error message string. Categorizes error (API, Network, Validation, Config, System) and provides user-friendly guidance with actionable next steps. Used in exception handlers.</description>
+    </interface>
+    <interface>
+      <name>analyze (CLI command)</name>
+      <kind>Typer command</kind>
+      <signature>@app.command() async def analyze(bankroll: float, threshold: float = 5.0, league: str | None = None, verbose: bool = False) → int</signature>
+      <path>src/bet_bot/cli/main.py</path>
+      <description>Main CLI entry point. Orchestrates entire pipeline. Returns exit code (0 success, 1 error). Implemented in this story.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing standards for bet-bot follow pytest with Pydantic model fixtures and asyncio.run() for async functions. Unit tests use mocking (unittest.mock) to isolate functions. Integration tests use real data structures and verify end-to-end pipeline. Tests validate: correct output types, proper error handling, logging output, performance within targets (&lt;2 min), exit codes. Minimum 80% code coverage required. Use Rich console capture for display output testing.
+    </standards>
+
+    <locations>
+      /tests/unit/ - Unit test files using pytest and mocks
+      /tests/integration/ - Integration test files using real data
+      /tests/fixtures/ - Reusable test data (sample fixtures, responses, etc)
+      Focus areas: CLI argument parsing, all 6 phases, error handling, timing, exit codes
+    </locations>
+
+    <ideas>
+      AC#1 (Import modules): Test all imports work without circular dependencies
+      AC#2 (Pipeline order): Test phase execution sequence, data flows between phases
+      AC#3 (No data loss): Test each phase receives correct data from previous phase
+      AC#4 (Bankroll arg): Test valid/invalid inputs, validation errors
+      AC#5 (Phase timing): Test execution time measurements, logging, performance target &lt;2 min
+      AC#6 (Exception handling): Test top-level catch prevents crash, proper error handling at each phase
+      AC#7 (Exit codes): Test return 0 on success, 1 on critical error, graceful degradation returns 0
+      AC#8 (Error display): Test display_error() called for exceptions, user-friendly messages shown
+      AC#9 (Formatter/Renderer): Test output displays correctly, picks formatted as table, states (picks found/no picks/error) work
+      AC#10 (Threshold override): Test --threshold arg accepted, overrides default 5%, validated 0-100%
+      AC#11 (League filter): Test --league arg accepted, passed to edge detection, filters fixtures
+      AC#12 (Data flow logging): Test logging shows fixtures → consolidated → analyzed → picks at each phase
+    </ideas>
+  </tests>
+</story-context>

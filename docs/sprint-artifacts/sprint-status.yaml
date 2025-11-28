@@ -73,19 +73,19 @@ development_status:
 
   # PHASE 6: Stake Sizing
   phase-6: backlog
-  6-1-implement-stake-calculator: review
+  6-1-implement-stake-calculator: done
   phase-6-retrospective: optional
 
   # PHASE 7: Display & Output
   phase-7: backlog
-  7-1-create-terminal-formatter-for-picks: backlog
-  7-2-implement-results-renderer: backlog
-  7-3-create-error-display-handler: backlog
+  7-1-create-terminal-formatter-for-picks: done
+  7-2-implement-results-renderer: done
+  7-3-create-error-display-handler: done
   phase-7-retrospective: optional
 
   # PHASE 8: Integration & Testing
   phase-8: backlog
-  8-1-wire-all-layers-together-in-cli: backlog
+  8-1-wire-all-layers-together-in-cli: review
   8-2-write-unit-tests-for-critical-paths: backlog
   8-3-integration-test-full-pipeline: backlog
   8-4-manual-testing-with-real-data: backlog
