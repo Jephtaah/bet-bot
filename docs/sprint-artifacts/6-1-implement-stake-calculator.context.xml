@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>6</epicId>
+    <storyId>1</storyId>
+    <title>Implement Stake Calculator</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-28</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/6-1-implement-stake-calculator.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>calculate recommended bet sizes based on edge and bankroll</iWant>
+    <soThat>the user doesn't overbets marginal picks</soThat>
+    <tasks>
+      - Task 1: Review architecture and requirements (AC: #1-#4)
+        - Understand stake formula from Story 5.4 completion notes
+        - Review bankroll parameter usage across pipeline
+        - Verify unit sizing standard (1 unit = bankroll / 200)
+        - Confirm input/output contracts with edge detection pipeline
+        - Review Story 6.1 section in technical spec (section 5: Stake Sizing)
+
+      - Task 2: Implement stake_calculator module (AC: #1-#7)
+        - Create `/src/bet_bot/analysis/stakes/__init__.py` with module docstring
+        - Create `/src/bet_bot/analysis/stakes/stake_calculator.py` with:
+          - `calculate_stake(bankroll: float, ev_percentage: float, confidence: int) -> dict` function
+          - Implement formula: `stake = bankroll × (EV_pct × 0.01 * 0.1) × (confidence / 100)`
+          - Implement unit calculation: `units = stake / (bankroll / 200)`
+          - Implement stake clamping: max stake = bankroll × 0.05 (5% risk per pick)
+          - Return dict with: `{"suggested_stake": float, "stake_in_units": float, "bankroll_percentage": float}`
+          - Add comprehensive docstring with examples
+        - Export `calculate_stake` from `__init__.py`
+
+      - Task 3: Handle edge cases and validation (AC: #8)
+        - Test with EV = 0% → stake should be 0
+        - Test with confidence = 0% → stake should be 0 or minimal
+        - Test with small bankroll ($100, 5% EV, 80% confidence) → should calculate correctly
+        - Test with large EV (20%) → clamp to max 5%
+        - Validate inputs: bankroll > 0, ev_percentage >= 0, confidence in [0, 100]
+        - Log warnings for edge cases (very small stake, confidence too low)
+
+      - Task 4: Implement logging and transparency (AC: #9)
+        - Log calculation formula with all inputs: bankroll, EV%, confidence
+        - Log intermediate results: calculated stake before clamping
+        - Log final result: stake, units, % of bankroll
+        - Log warnings if:
+          - Stake is clamped (would exceed 5%)
+          - Confidence &lt; 50% (risky pick)
+          - EV &lt; 2% (minimal edge)
+
+      - Task 5: Create unit tests (AC: #1-#9)
+        - Create `/tests/unit/test_stake_calculator.py` with 15+ test cases
+        - Comprehensive test suites: TestBasicCalculation, TestUnitSizing, TestClamping, TestEdgeCases, TestInputValidation, TestBankrollPercentage
+        - Achieve >= 90% code coverage on stake_calculator module
+
+      - Task 6: Create integration tests (AC: #1-#9)
+        - Create `/tests/integration/test_stake_calculator_integration.py` with 8+ test cases
+        - Test integration with Story 5.4 edge detection pipeline
+        - Test multiple pick scenarios and data quality scenarios
+
+      - Task 7: Write module documentation (AC: #1-#9)
+        - Module docstring explaining stake sizing purpose
+        - Docstring for `calculate_stake()` with parameter descriptions, return value, formula explanation, notes, and usage examples
+        - Link to technical spec section 5
+
+      - Task 8: Verify integration with edge detection (AC: #1-#9)
+        - Story 5.4 already calls stake calculation in detect_edges()
+        - Verify calculate_stake is called with correct Pick fields
+        - Verify stake values are added to Pick objects
+        - Test end-to-end: fixtures → edge detection → stakes calculated
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Create `/src/bet_bot/analysis/stakes/stake_calculator.py` module
+    2. Implement `calculate_stake()` function accepting: bankroll (float), ev_percentage (float), confidence (int)
+    3. Formula: `stake = bankroll × (EV_pct × 0.1) × (confidence / 100)`
+    4. Example: $1000 bankroll, 5% EV, 80% confidence = $4 stake
+    5. Calculate unit sizing: `1 unit = bankroll / 200`
+    6. Return: dict with `suggested_stake` ($, float) and `stake_in_units` (units, float)
+    7. Clamp stake: Never suggest > bankroll (max 5% of bankroll per pick)
+    8. Handle edge cases: 0% EV, 0% confidence, small bankroll ($100)
+    9. Log stake calculation details for transparency
+    10. Export `calculate_stake()` from `/src/bet_bot/analysis/stakes/__init__.py`
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <!-- Story 6.1 context from Dev Notes -->
+      <artifact>
+        <path>docs/sprint-artifacts/6-1-implement-stake-calculator.md</path>
+        <title>Story 6.1: Implement Stake Calculator</title>
+        <section>Dev Notes - Requirements Context Summary</section>
+        <snippet>Purpose: Calculate recommended bet sizes to prevent overexposure. Formula: stake = bankroll × (EV_pct × 0.1) × (confidence / 100). Example: $1000 bankroll, 5% EV, 80% confidence = $4 stake. Conservative approach: Never stake > 5% of bankroll per pick.</snippet>
+      </artifact>
+
+      <!-- Story 5.4 reference - contains existing stake calculation -->
+      <artifact>
+        <path>docs/sprint-artifacts/5-4-create-edge-detection-pipeline.md</path>
+        <title>Story 5.4: Create Edge Detection Pipeline</title>
+        <section>Stake Calculation Integration</section>
+        <snippet>Story 5.4 already calculates recommended_stake in detect_edges(). Formula used: bankroll × (ev_percentage * 0.01 * 0.1) × (confidence / 100). This story refines and separates stake calculation into dedicated module.</snippet>
+      </artifact>
+
+      <!-- Story 5.3 reference - confidence scoring -->
+      <artifact>
+        <path>docs/sprint-artifacts/5-3-implement-confidence-scoring-logic.md</path>
+        <title>Story 5.3: Implement Confidence Scoring Logic</title>
+        <section>Confidence Score Output</section>
+        <snippet>Provides final_confidence score (0-100) that is used as input to stake calculation formula. Confidence scaling: high confidence = full stake, low confidence = reduced stake.</snippet>
+      </artifact>
+    </docs>
+
+    <code>
+      <!-- Existing stake calculation implementation in pipeline -->
+      <artifact>
+        <path>src/bet_bot/analysis/edge/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>_calculate_recommended_stake</symbol>
+        <lines>72-111</lines>
+        <reason>Existing implementation of stake calculation inline in edge detection pipeline. This story refactors this function into a dedicated module. Formula reference: bankroll * (ev_percentage * 0.01 * 0.1) * (confidence / 100). Clamps to max 5% of bankroll.</reason>
+      </artifact>
+
+      <!-- Pick model - defines output structure for stakes -->
+      <artifact>
+        <path>src/bet_bot/models/analysis.py</path>
+        <kind>model</kind>
+        <symbol>Pick</symbol>
+        <lines>143-236</lines>
+        <reason>Defines Pick model with recommended_stake field (line 217-221). This is where calculated stakes are stored. Type: float, description: "Suggested bet amount in currency units", constraint: gt=0.0</reason>
+      </artifact>
+
+      <!-- Edge detection pipeline - calls stake calculation -->
+      <artifact>
+        <path>src/bet_bot/analysis/edge/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>detect_edges</symbol>
+        <lines>275-488</lines>
+        <reason>Main orchestrator that calls _calculate_recommended_stake at lines 426-430. This is the integration point where stake calculator must be called with ev_percentage, confidence, and bankroll parameters.</reason>
+      </artifact>
+
+      <!-- Analysis module __init__ - exports interface -->
+      <artifact>
+        <path>src/bet_bot/analysis/__init__.py</path>
+        <kind>module</kind>
+        <symbol>Analysis module</symbol>
+        <reason>Module that should export calculate_stake function (once implemented). Currently only contains "Analysis and edge detection module." docstring. Will need to add import and export of calculate_stake.</reason>
+      </artifact>
+
+      <!-- Confidence scorer - provides confidence input -->
+      <artifact>
+        <path>src/bet_bot/analysis/edge/confidence_scorer.py</path>
+        <kind>module</kind>
+        <symbol>ConfidenceScoreBreakdown</symbol>
+        <reason>Produces final_confidence score used as input to stake calculator. Stake calculation receives confidence values from this component.</reason>
+      </artifact>
+
+      <!-- EV calculator - provides EV input -->
+      <artifact>
+        <path>src/bet_bot/analysis/edge/ev_calculator.py</path>
+        <kind>module</kind>
+        <symbol>EVResult</symbol>
+        <reason>Produces ev_percentage values used as input to stake calculator. Stake calculation receives EV percentages from this component.</reason>
+      </artifact>
+    </code>
+
+    <dependencies>
+      <ecosystem name="python">
+        <package name="pydantic" version=">=2.0" reason="Required for data validation in models and return types"/>
+        <package name="logging" reason="Built-in logging for stake calculation transparency"/>
+        <package name="bet_bot.models.analysis" reason="Pick model with recommended_stake field"/>
+        <package name="bet_bot.analysis.edge.confidence_scorer" reason="ConfidenceScoreBreakdown type for confidence input"/>
+        <package name="bet_bot.analysis.edge.ev_calculator" reason="EVResult type for EV input"/>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <!-- Architecture constraints from Dev Notes and pattern enforcement -->
+    <constraint>
+      <type>formula</type>
+      <description>Stake Formula: stake = bankroll × (EV_pct × 0.01 × 0.1) × (confidence / 100). CRITICAL: Must match existing implementation in Story 5.4 pipeline.py _calculate_recommended_stake() exactly to ensure consistency.</description>
+      <source>Story 6.1 Dev Notes, Technical Spec Section 5</source>
+    </constraint>
+
+    <constraint>
+      <type>clamping</type>
+      <description>Maximum stake per pick: 5% of bankroll. Never suggest stake > bankroll × 0.05. This is a safety measure to prevent overexposure on single picks.</description>
+      <source>Story 6.1 Dev Notes - Clamping Logic</source>
+    </constraint>
+
+    <constraint>
+      <type>minimum</type>
+      <description>Minimum stake: $0.01 (one cent). Ensure return statement includes max(stake, 0.01) to prevent zero or negative stakes.</description>
+      <source>Story 5.4 pipeline.py line 111</source>
+    </constraint>
+
+    <constraint>
+      <type>unit_sizing</type>
+      <description>Unit sizing standard: 1 unit = bankroll / 200. This is a professional sports betting standard allowing ~200 picks at full stake before bankruptcy. Stake in units calculation: stake_in_units = suggested_stake / (bankroll / 200).</description>
+      <source>Story 6.1 Dev Notes - Unit Sizing Standard</source>
+    </constraint>
+
+    <constraint>
+      <type>input_validation</type>
+      <description>MUST validate inputs before calculation: bankroll > 0, ev_percentage >= 0, confidence in range [0, 100]. Raise ValueError for invalid inputs.</description>
+      <source>Story 6.1 Acceptance Criteria #8, Tasks #3</source>
+    </constraint>
+
+    <constraint>
+      <type>logging</type>
+      <description>Log ALL stake calculations with: (1) formula with inputs, (2) intermediate stake before clamping, (3) final result with units and bankroll %. Log WARNINGS for: stakes clamped, confidence &lt; 50%, EV &lt; 2%. Follow project logging pattern (structured logging with extra context dict).</description>
+      <source>Story 6.1 Tasks #4, Project CLAUDE.md Logging standards</source>
+    </constraint>
+
+    <constraint>
+      <type>return_type</type>
+      <description>MUST return dict with keys: "suggested_stake" (float), "stake_in_units" (float), "bankroll_percentage" (float). Do NOT change return type to custom class or named tuple without updating Story 5.4 integration.</description>
+      <source>Story 6.1 Acceptance Criteria #6</source>
+    </constraint>
+
+    <constraint>
+      <type>module_location</type>
+      <description>Create `/src/bet_bot/analysis/stakes/` directory as new module. Implementation in: `/src/bet_bot/analysis/stakes/stake_calculator.py`. Exports from: `/src/bet_bot/analysis/stakes/__init__.py`</description>
+      <source>Story 6.1 Tasks #2</source>
+    </constraint>
+
+    <constraint>
+      <type>integration</type>
+      <description>Story 5.4's detect_edges() already calculates stakes inline. This story creates dedicated module BUT must NOT break Story 5.4. After implementation, Story 5.4 can optionally refactor to call the new calculate_stake() function (but this is NOT required by Story 6.1 acceptance criteria).</description>
+      <source>Story 6.1 Dev Notes - Learnings from Previous Story</source>
+    </constraint>
+
+    <constraint>
+      <type>testing</type>
+      <description>MUST achieve >= 90% code coverage on stake_calculator module. Tests MUST include: basic calculation, unit sizing, clamping, edge cases (zero EV, zero confidence, small/large bankrolls), input validation, and integration with Pick objects from Story 5.4.</description>
+      <source>Story 6.1 Tasks #5, #6</source>
+    </constraint>
+
+    <constraint>
+      <type>pattern_compliance</type>
+      <description>Follow project anti-AI-inconsistency enforcement rules: use Pydantic v2 for any validation models, use proper async/await patterns if needed, use structured logging with logger module (NOT print), validate inputs at boundaries, handle errors explicitly (no bare except clauses).</description>
+      <source>Project CLAUDE.md - ANTI-AI-INCONSISTENCY ENFORCEMENT</source>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>calculate_stake</name>
+      <kind>function</kind>
+      <signature>def calculate_stake(bankroll: float, ev_percentage: float, confidence: int) -> dict[str, float]</signature>
+      <path>src/bet_bot/analysis/stakes/stake_calculator.py</path>
+      <description>Main exported function for stake calculation. Input: bankroll (float, > 0), ev_percentage (float, >= 0), confidence (int, 0-100). Output: dict with keys "suggested_stake", "stake_in_units", "bankroll_percentage".</description>
+      <contract>
+        <precondition>bankroll > 0, ev_percentage >= 0, confidence in [0, 100]</precondition>
+        <postcondition>Returns dict with three float values. suggested_stake in currency units, never exceeds 5% of bankroll. stake_in_units = suggested_stake / (bankroll / 200). bankroll_percentage = (suggested_stake / bankroll) * 100.</postcondition>
+        <raises>ValueError if inputs are invalid</raises>
+      </contract>
+    </interface>
+
+    <interface>
+      <name>Pick.recommended_stake</name>
+      <kind>model field</kind>
+      <signature>recommended_stake: float = Field(..., description="Suggested bet amount in currency units", gt=0.0)</signature>
+      <path>src/bet_bot/models/analysis.py:217-221</path>
+      <description>Pick model field populated by calculate_stake() output. Type: float, constraint: > 0. This field is read by display layer (Story 7.1) for formatting betting recommendations.</description>
+    </interface>
+
+    <interface>
+      <name>detect_edges integration</name>
+      <kind>function call</kind>
+      <signature>detect_edges(fixtures: list[Fixture], bankroll: float = 1000.0) -> list[Pick] | str</signature>
+      <path>src/bet_bot/analysis/edge/pipeline.py:275-488</path>
+      <description>Edge detection pipeline that orchestrates stake calculation. Currently calls _calculate_recommended_stake() inline at lines 426-430. After Story 6.1, can optionally call refactored calculate_stake() function from stakes module.</description>
+      <integration>
+        <input>Receives bankroll parameter, ev_percentage and confidence from EVResult and ConfidenceScoreBreakdown</input>
+        <output>Populates Pick objects with recommended_stake value</output>
+        <required>calculate_stake must produce stakes using same formula as current _calculate_recommended_stake to avoid breaking Story 5.4</required>
+      </integration>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      The project follows pytest conventions with fixtures and parametrized tests. Test files located in `/tests/unit/` and `/tests/integration/` directories. Tests use assert statements for validation. Test functions named `test_*`. Test classes named `Test*`. Fixtures defined at module/session level using @pytest.fixture decorator. Parametrized tests use @pytest.mark.parametrize. All tests should include docstrings explaining what is tested. Follow existing test patterns in `/tests/unit/test_ev_calculator.py` and `/tests/unit/test_confidence_scorer.py` for consistency. Use mock/patch only when necessary (avoid for pure functions like stake calculation). Target >= 90% code coverage measured with pytest-cov.
+    </standards>
+
+    <locations>
+      - Unit tests: `/tests/unit/test_stake_calculator.py` (NEW - create in this story)
+      - Integration tests: `/tests/integration/test_stake_calculator_integration.py` (NEW - create in this story)
+      - Existing pattern references: `/tests/unit/test_ev_calculator.py`, `/tests/unit/test_confidence_scorer.py`, `/tests/integration/test_edge_detection_pipeline.py`
+    </locations>
+
+    <ideas>
+      AC #1-4 (Basic formula and example):
+        - test_calculate_stake_example_from_ac: $1000 bankroll, 5% EV, 80% confidence → $4 suggested_stake, 0.4 stake_in_units
+        - test_calculate_stake_high_ev: $1000 bankroll, 10% EV, 90% confidence → verify formula step-by-step
+        - test_formula_order_of_operations: Verify (EV × 0.01 × 0.1) is applied before (confidence / 100) multiplication
+
+      AC #5 (Unit sizing):
+        - test_unit_size_calculation: 1 unit = bankroll / 200 for various bankroll sizes ($100, $500, $1000, $10000)
+        - test_stake_in_units_matches_formula: stake_in_units = suggested_stake / (bankroll / 200) for various inputs
+
+      AC #6 (Return structure):
+        - test_return_dict_keys: Result dict has exactly "suggested_stake", "stake_in_units", "bankroll_percentage"
+        - test_return_types: All values are float type
+        - test_bankroll_percentage_calculation: (suggested_stake / bankroll) * 100 is correct
+
+      AC #7 (Clamping):
+        - test_clamp_high_ev_high_confidence: 20% EV, 95% confidence → clamp to 5% of bankroll max
+        - test_clamp_50_percent_ev: 50% EV, 100% confidence → clamps appropriately
+        - test_no_clamp_normal_case: 5% EV, 80% confidence → no clamping needed
+        - test_clamp_message_in_logs: Verify DEBUG log when clamping occurs
+
+      AC #8 (Edge cases and validation):
+        - test_zero_ev_zero_stake: EV = 0% → stake should be $0.01 (minimum)
+        - test_zero_confidence_minimal_stake: Confidence = 0% → stake should be $0.01 (minimum)
+        - test_small_bankroll_100: $100 bankroll, 5% EV, 80% confidence → $0.40 stake (correct calculation)
+        - test_large_bankroll_100000: $100,000 bankroll → no overflow, calculations correct
+        - test_invalid_bankroll_negative: Negative bankroll → raises ValueError
+        - test_invalid_bankroll_zero: Zero bankroll → raises ValueError
+        - test_invalid_ev_negative: Negative EV → raises ValueError
+        - test_invalid_confidence_above_100: Confidence > 100 → raises ValueError
+        - test_invalid_confidence_negative: Confidence < 0 → raises ValueError
+
+      AC #9 (Logging):
+        - test_log_calculation_details: Verify logger.info/debug called with formula inputs
+        - test_log_intermediate_stake: Log before clamping value is recorded
+        - test_log_final_result: Log includes stake, units, bankroll %
+        - test_log_warning_clamped: Warning logged when stake is clamped
+        - test_log_warning_low_confidence: Warning logged when confidence < 50%
+        - test_log_warning_low_ev: Warning logged when EV < 2%
+
+      Integration tests (Story 5.4 compatibility):
+        - test_integration_with_pick_objects: Create stakes for Pick objects from edge detection pipeline
+        - test_integration_multiple_picks: Calculate stakes for multiple picks independently
+        - test_integration_total_exposure: Document behavior when multiple picks sum to > bankroll (should be independent calculations, not sum-checked)
+        - test_integration_data_quality_scenarios: Fresh data (high confidence) → reasonable stakes; Stale data (low confidence) → minimal stakes
+    </ideas>
+  </tests>
+</story-context>

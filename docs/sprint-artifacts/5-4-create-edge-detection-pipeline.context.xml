@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="bet-bot/5-4-create-edge-detection-pipeline" v="1.0">
+  <metadata>
+    <epicId>5</epicId>
+    <storyId>4</storyId>
+    <title>Create Edge Detection Pipeline</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/5-4-create-edge-detection-pipeline.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>As a developer</asA>
+    <iWant>I want to run full edge detection on all analyzed fixtures</iWant>
+    <soThat>recommendations are ready for display</soThat>
+    <tasks>
+      <task n="1">Review architecture and integration requirements (AC: #2-#3)</task>
+      <task n="2">Implement detect_edges() orchestrator function (AC: #1, #2-#5, #9)</task>
+      <task n="3">Implement summary statistics logging (AC: #7)</task>
+      <task n="4">Implement "NO PICKS" handling (AC: #8)</task>
+      <task n="5">Handle marginal picks (optional output) (AC: #6)</task>
+      <task n="6">Implement stake calculation with bankroll parameter (AC: #10)</task>
+      <task n="7">Create unit tests (AC: #1-#10)</task>
+      <task n="8">Create integration test with full pipeline (AC: #1-#10)</task>
+      <task n="9">Write module documentation (AC: #1)</task>
+      <task n="10">Update module exports in __init__.py (AC: #1)</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Create `/src/bet_bot/analysis/edge/__init__.py` with `detect_edges()` async function</criterion>
+    <criterion id="2">Input: List of fixtures with AI analysis (from Story 4.4)</criterion>
+    <criterion id="3">Calculate EV for each market using Story 5.1 (ev_calculator)</criterion>
+    <criterion id="4">Score confidence for each pick using Story 5.3 (confidence_scorer)</criterion>
+    <criterion id="5">Filter by 5% EV threshold using Story 5.2 (threshold_filter)</criterion>
+    <criterion id="6">Output: List of `Pick` objects with fields: fixture_id, market, ai_probability, implied_probability, ev_percentage, confidence, recommended_stake, suggested_odds</criterion>
+    <criterion id="7">Log summary: Total picks found, picks above threshold, edge distribution (mean EV, min/max), confidence distribution (high/medium/low tiers)</criterion>
+    <criterion id="8">Handle "NO PICKS" case gracefully - return user-friendly message if no picks above threshold</criterion>
+    <criterion id="9">Transform EVResult + ConfidenceScoreBreakdown into Pick objects</criterion>
+    <criterion id="10">Calculate recommended_stake using formula: bankroll × (EV_pct × 0.1) × (confidence / 100)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>System Architecture</title>
+        <section>Section 4 - Edge Detection Layer</section>
+        <snippet>Purpose: Three-step pipeline to identify positive EV opportunities. Step 1: Calculate EV for each market (Story 5.1). Step 2: Filter by 5% EV threshold (Story 5.2). Step 3: Score confidence based on data quality (Story 5.3). Output: Clean list of Pick objects with all metadata.</snippet>
+      </doc>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>System Architecture</title>
+        <section>Section 5 - Stake Sizing Layer</section>
+        <snippet>Formula: stake = bankroll × (EV_percentage * 0.1) × (confidence / 100). Example: $1000 bankroll, 5% EV, 80% confidence = 1000 × 0.005 × 0.8 = $4. Conservative multiplier with confidence scaling.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/5-1-implement-expected-value-calculation.md</path>
+        <title>Story 5.1: Expected Value Calculation</title>
+        <section>Batch Processing Function - calculate_all_evs()</section>
+        <snippet>Batch processing function: `async def calculate_all_evs(fixtures: list[Fixture]) -> list[Fixture]` that attaches EV data to fixtures. Returns fixtures with `ev_results` field populated containing list of EVResult objects.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/5-2-create-threshold-filter-for-edge-detection.md</path>
+        <title>Story 5.2: Threshold Filter</title>
+        <section>Core Filtering Functions</section>
+        <snippet>Categorize picks into RECOMMENDED (≥5%), MARGINAL (2-5%), LOW (&lt;2%), INVALID. Function `categorize_picks(ev_results)` returns dict with all categories. 5% threshold is non-negotiable discipline requirement.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/5-2-create-threshold-filter-for-edge-detection.md</path>
+        <title>Story 5.2: Threshold Filter</title>
+        <section>NO PICKS Messaging</section>
+        <snippet>Function `no_picks_available_message(ev_results, threshold_pct)` returns formatted message when no RECOMMENDED picks exist. Includes summary of categories found (MARGINAL, LOW, INVALID counts) and suggests user action.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/5-3-implement-confidence-scoring-logic.md</path>
+        <title>Story 5.3: Confidence Scoring</title>
+        <section>Batch Confidence Scoring</section>
+        <snippet>Function `apply_confidence_scoring(picks, fixtures)` returns list of ConfidenceScoreBreakdown objects. Base score: 75%. Adjustments: form (+15 to -5), injuries (+5 to -10), odds (+5 to -10), final confidence clamped to [0, 100].</snippet>
+      </doc>
+      <doc>
+        <path>docs/requirements.md</path>
+        <title>Project Requirements</title>
+        <section>Phase 5 - Edge Detection</section>
+        <snippet>Edge detection phase combines EV calculation, threshold filtering, and confidence scoring to identify betting opportunities. Output feeds to stake sizing (Phase 6) and display (Phase 7).</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <item>
+        <path>src/bet_bot/models/analysis.py</path>
+        <kind>model</kind>
+        <symbol>Pick</symbol>
+        <lines>143-200</lines>
+        <reason>Target output model - defines all fields required for Story 5.4 (fixture_id, market, ai_probability, implied_probability, ev_percentage, confidence, recommended_stake, suggested_odds)</reason>
+      </item>
+      <item>
+        <path>src/bet_bot/analysis/edge/ev_calculator.py</path>
+        <kind>module</kind>
+        <symbol>EVResult, calculate_all_evs</symbol>
+        <reason>Core dependency for Step 1 of orchestrator - provides EV calculations for all markets in fixtures</reason>
+      </item>
+      <item>
+        <path>src/bet_bot/analysis/edge/threshold_filter.py</path>
+        <kind>module</kind>
+        <symbol>apply_threshold_filter, FilteredPick, no_picks_available_message</symbol>
+        <reason>Core dependency for Step 2 - filters EVResults by 5% threshold, provides NO_PICKS messaging</reason>
+      </item>
+      <item>
+        <path>src/bet_bot/analysis/edge/confidence_scorer.py</path>
+        <kind>module</kind>
+        <symbol>apply_confidence_scoring, ConfidenceScoreBreakdown</symbol>
+        <reason>Core dependency for Step 3 - scores confidence for each recommended pick based on data freshness</reason>
+      </item>
+      <item>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>model</kind>
+        <symbol>Fixture</symbol>
+        <reason>Input model - required to have ai_analysis field populated (from Story 4.4) and timestamps for confidence scoring</reason>
+      </item>
+      <item>
+        <path>src/bet_bot/analysis/edge/__init__.py</path>
+        <kind>module</kind>
+        <symbol>__init__ exports</symbol>
+        <reason>Location where detect_edges() function will be defined and exported for downstream consumers (Story 6.1, 7.1)</reason>
+      </item>
+      <item>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>module</kind>
+        <symbol>DataValidationError, DataStaleError, BetBotError</symbol>
+        <reason>Exception hierarchy for error handling - use for validation failures and data quality issues</reason>
+      </item>
+      <item>
+        <path>src/bet_bot/utils/logging.py</path>
+        <kind>module</kind>
+        <symbol>setup_logging</symbol>
+        <reason>Logging infrastructure - use for summary statistics and progress logging</reason>
+      </item>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="pydantic" version=">=2.0" description="Data validation and Pydantic models (v2 syntax)"/>
+        <package name="asyncio" version="builtin" description="Async/await support"/>
+        <package name="logging" version="builtin" description="Structured logging"/>
+      </python>
+      <internal>
+        <module name="bet_bot.models.analysis" exports="Pick, MarketAnalysis, AIAnalysis"/>
+        <module name="bet_bot.models.fixtures" exports="Fixture, Team, League"/>
+        <module name="bet_bot.analysis.edge.ev_calculator" exports="EVResult, calculate_all_evs, filter_evs_by_threshold"/>
+        <module name="bet_bot.analysis.edge.threshold_filter" exports="FilteredPick, PickCategory, apply_threshold_filter, no_picks_available_message"/>
+        <module name="bet_bot.analysis.edge.confidence_scorer" exports="ConfidenceScoreBreakdown, apply_confidence_scoring"/>
+      </internal>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="business">5% EV threshold is non-negotiable discipline - never lower this threshold</constraint>
+    <constraint type="architecture">Pipeline must orchestrate exact order: EV calculation → threshold filtering → confidence scoring → Pick transformation</constraint>
+    <constraint type="data">Input fixtures MUST have ai_analysis field populated from Story 4.4 (OpenAI batch analysis)</constraint>
+    <constraint type="error-handling">Graceful degradation: if any step fails for a single pick, log error and continue (don't raise exception for entire batch)</constraint>
+    <constraint type="logging">Log progress for each step and comprehensive summary statistics at end (total picks, threshold breakdown, EV distribution, confidence tiers)</constraint>
+    <constraint type="stake-calculation">Formula: stake = bankroll × (ev_percentage * 0.01 * 0.1) × (confidence / 100). Clamp stake to reasonable % of bankroll (e.g., max 5%)</constraint>
+    <constraint type="return-type">Return type must handle both success (list[Pick]) and no-picks case (user-friendly message string)</constraint>
+    <constraint type="timezone">Use timezone-aware UTC datetime (datetime.now(timezone.utc), NOT datetime.utcnow() which is deprecated)</constraint>
+    <constraint type="type-hints">All functions must have explicit return type annotations. Use Python 3.14+ syntax: list[X] not List[X], X | None not Optional[X]</constraint>
+    <constraint type="pydantic">Use Pydantic v2 syntax: @field_validator not @validator, ConfigDict not Config class, field_validator(..., mode="before"|"after")</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>detect_edges()</name>
+      <kind>async function</kind>
+      <signature>async def detect_edges(fixtures: list[Fixture], bankroll: float = 1000.0) -> list[Pick] | str</signature>
+      <path>src/bet_bot/analysis/edge/__init__.py (or pipeline.py)</path>
+      <description>Main orchestrator function. Takes fixtures with ai_analysis, runs EV→threshold→confidence pipeline, returns list of Pick objects or NO_PICKS message</description>
+    </interface>
+    <interface>
+      <name>calculate_all_evs()</name>
+      <kind>async function</kind>
+      <signature>async def calculate_all_evs(fixtures: list[Fixture]) -> list[Fixture]</signature>
+      <path>src/bet_bot/analysis/edge/ev_calculator.py</path>
+      <description>Calculates EV for all markets in fixtures. Returns fixtures with ev_results field populated (list[EVResult])</description>
+    </interface>
+    <interface>
+      <name>apply_threshold_filter()</name>
+      <kind>async function</kind>
+      <signature>async def apply_threshold_filter(fixtures: list[Fixture], threshold_pct: float = 5.0) -> dict[str, Any]</signature>
+      <path>src/bet_bot/analysis/edge/threshold_filter.py</path>
+      <description>Filters EVResults by 5% threshold. Returns dict with keys: recommended (list[FilteredPick]), marginal, low, total, has_picks (bool)</description>
+    </interface>
+    <interface>
+      <name>apply_confidence_scoring()</name>
+      <kind>async function</kind>
+      <signature>async def apply_confidence_scoring(picks: list[EVResult], fixtures: list[Fixture]) -> list[dict[str, Any]]</signature>
+      <path>src/bet_bot/analysis/edge/confidence_scorer.py</path>
+      <description>Scores confidence for each pick based on data freshness. Returns list of dicts with confidence breakdown and scores</description>
+    </interface>
+    <interface>
+      <name>no_picks_available_message()</name>
+      <kind>function</kind>
+      <signature>def no_picks_available_message(ev_results: list[EVResult], threshold_pct: float = 5.0) -> str</signature>
+      <path>src/bet_bot/analysis/edge/threshold_filter.py</path>
+      <description>Generates user-friendly message when no picks above threshold. Includes summary of categories found and statistics</description>
+    </interface>
+    <interface>
+      <name>Pick model</name>
+      <kind>Pydantic model</kind>
+      <signature>class Pick(BaseModel): fixture_id, market, ai_probability, implied_probability, ev_percentage, confidence, recommended_stake, suggested_odds</signature>
+      <path>src/bet_bot/models/analysis.py</path>
+      <description>Output model for betting picks. All Story 5.4 picks must conform to this schema</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <paragraph>
+        Testing standards for Story 5.4 follow project patterns: pytest framework with async support (pytest-asyncio). Test organization by function (TestDetectEdges, TestStakeCalculation). Coverage target: 80% overall, 100% for critical paths. Test naming convention: `test_[scenario]_[expected_result]`. Include edge cases (empty list, no picks, single fixture) and error scenarios (missing timestamps, stale data).
+      </paragraph>
+      <paragraph>
+        Error handling tests: Verify graceful degradation when individual steps fail. Data validation tests: Verify Pick objects have all required fields. Integration tests: End-to-end pipeline with realistic fixture data from Stories 5.1-5.3. Stake calculation tests: Verify formula correctness with boundary conditions and various bankroll/EV/confidence combinations.
+      </paragraph>
+    </standards>
+
+    <locations>
+      <location pattern="tests/unit/test_edge_detection_pipeline.py">Unit tests for detect_edges() orchestrator, stake calculation, summary statistics, no-picks handling (30+ test cases)</location>
+      <location pattern="tests/integration/test_detect_edges_pipeline.py">Integration tests with full pipeline (15+ test cases), using real Fixture/EVResult/ConfidenceScoreBreakdown models</location>
+    </locations>
+
+    <ideas>
+      <idea acId="1-2">Test detect_edges() initialization: async function callable, accepts fixtures and optional bankroll parameter</idea>
+      <idea acId="2-3">Test EV calculation step: calls calculate_all_evs(), attaches ev_results to fixtures</idea>
+      <idea acId="3">Test threshold filtering step: calls apply_threshold_filter(), extracts RECOMMENDED picks</idea>
+      <idea acId="4">Test confidence scoring step: calls apply_confidence_scoring(), returns ConfidenceScoreBreakdown for each pick</idea>
+      <idea acId="5-6">Test Pick transformation: EVResult + ConfidenceScoreBreakdown → Pick object with all fields populated</idea>
+      <idea acId="7">Test summary statistics: mean/min/max EV, confidence tier counts (high/medium/low), total and threshold-filtered counts</idea>
+      <idea acId="8">Test NO_PICKS message: empty recommended picks list → calls no_picks_available_message(), returns formatted string</idea>
+      <idea acId="10">Test stake calculation formula: bankroll × (ev_pct * 0.01 * 0.1) × (confidence/100) with various inputs, verify clamping</idea>
+      <idea acId="9">Test Pick object completeness: all required fields present (fixture_id, market, ai_probability, implied_probability, ev_percentage, confidence, recommended_stake, suggested_odds)</idea>
+      <idea acId="3-4">Test error resilience: if confidence_scorer fails for one pick, log error and continue processing others</idea>
+    </ideas>
+  </tests>
+</story-context>

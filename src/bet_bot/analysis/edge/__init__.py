@@ -1,15 +1,19 @@
 """
 Edge detection module for bet-bot.
 
-This package provides edge detection capabilities: EV calculation, threshold filtering,
-and confidence scoring for identifying positive EV betting opportunities.
+This package provides complete edge detection pipeline: EV calculation, threshold filtering,
+confidence scoring, and orchestration for identifying positive EV betting opportunities.
 
 Modules:
-- ev_calculator: Calculate expected value and extract EV results
+- pipeline: Orchestrate complete edge detection pipeline (Story 5.4)
+- ev_calculator: Calculate expected value and extract EV results (Story 5.1)
 - threshold_filter: Filter EV results by threshold (Story 5.2)
 - confidence_scorer: Score data quality for confidence (Story 5.3)
 
-Main exports from ev_calculator (Story 5.1):
+Main entry point (Story 5.4):
+- detect_edges(fixtures, bankroll) -> list[Pick] | str: Complete pipeline orchestrator
+
+Exports from ev_calculator (Story 5.1):
 - EVResult: Pydantic model for single EV calculation
 - calculate_ev: Core EV calculation function
 - calculate_implied_probability: Implied probability from odds
@@ -34,10 +38,19 @@ Exports from confidence_scorer (Story 5.3):
 - apply_confidence_scoring: Batch confidence scoring
 
 Usage:
-    from bet_bot.analysis.edge import (
-        EVResult, calculate_all_evs, PickCategory, apply_threshold_filter,
-        ConfidenceScoreBreakdown, score_pick, apply_confidence_scoring
+    from bet_bot.analysis.edge import detect_edges, EVResult, PickCategory, ConfidenceScoreBreakdown
+
+    # Orchestrate complete pipeline
+    picks = await detect_edges(
+        fixtures=fixtures_with_ai_analysis,
+        bankroll=1000.0
     )
+
+    if isinstance(picks, str):
+        print(picks)  # NO_PICKS message
+    else:
+        for pick in picks:
+            print(f"{pick.market}: +{pick.ev_percentage:.1f}% EV @ {pick.suggested_odds}")
 """
 
 from bet_bot.analysis.edge.ev_calculator import (
@@ -65,19 +78,25 @@ from bet_bot.analysis.edge.confidence_scorer import (
     score_odds_freshness,
     score_pick,
 )
+from bet_bot.analysis.edge.pipeline import detect_edges
 
 __all__ = [
+    # Pipeline orchestrator (Story 5.4)
+    "detect_edges",
+    # EV Calculator exports (Story 5.1)
     "EVResult",
     "calculate_ev",
     "calculate_implied_probability",
     "calculate_ev_percentage",
     "calculate_all_evs",
     "filter_evs_by_threshold",
+    # Threshold Filter exports (Story 5.2)
     "PickCategory",
     "FilteredPick",
     "filter_picks_by_threshold",
     "categorize_picks",
     "apply_threshold_filter",
+    # Confidence Scorer exports (Story 5.3)
     "ConfidenceScoreBreakdown",
     "calculate_base_score",
     "score_form_freshness",
