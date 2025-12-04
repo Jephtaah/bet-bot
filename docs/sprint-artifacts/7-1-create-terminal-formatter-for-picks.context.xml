@@ -1,0 +1,160 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>7</epicId>
+    <storyId>1</storyId>
+    <title>Create Terminal Formatter for Picks</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-28</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/7-1-create-terminal-formatter-for-picks.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>see betting picks displayed in a beautiful, readable terminal format</iWant>
+    <soThat>I can quickly evaluate each opportunity and understand the risk/reward metrics</soThat>
+    <tasks>
+      - Task 1: Review architecture and Rich library integration (AC: #1-#3)
+      - Task 2: Implement format_picks_for_display() function (AC: #2-#7)
+      - Task 3: Implement empty picks handling (AC: #8)
+      - Task 4: Implement summary footer (AC: #9)
+      - Task 5: Add color and styling (AC: #4-#7)
+      - Task 6: Implement fixture formatting helper (AC: #7)
+      - Task 7: Create unit tests (AC: #1-#9)
+      - Task 8: Create integration test (AC: #1-#9)
+      - Task 9: Create display module structure (AC: #10)
+      - Task 10: Update CLI to use formatter (optional, future integration)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. Create `/src/bet_bot/display/formatter.py` module with terminal formatting logic
+    2. Implement `format_picks_for_display(picks: list[Pick]) -> str` function returning formatted table
+    3. Build table using Rich library with columns: Fixture, Market, AI Prob, Implied Prob, EV, Confidence, Stake
+    4. Format EV as percentage with color (green for positive, red for negative): e.g., "+5.2%"
+    5. Format confidence as colored badge: high (>80%, green), medium (60-80%, yellow), low (<60%, red)
+    6. Format stake in USD: e.g., "$4.50" with right-alignment
+    7. Format fixtures as "Home vs Away (League)" with date/time when available
+    8. Handle empty picks list: return user-friendly message "No profitable picks found meeting your criteria"
+    9. Add summary footer with statistics: Total picks, Average EV, Average Confidence, Total stake required
+    10. Export `format_picks_for_display()` from `/src/bet_bot/display/__init__.py`
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technical Specification - Display Layer</title>
+        <section>Module Breakdown: Display Layer (6)</section>
+        <snippet>Purpose: Render results to terminal. Modules: formatter.py - Formats picks for terminal display, renderer.py - Uses `rich` for beautiful output, error_handler.py - Displays error states gracefully. Output Structure shows colored EV, confidence scores, and suggested stakes.</snippet>
+      </doc>
+      <doc>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary - Pick Output Section</title>
+        <section>Section 10: Final Pick Output</section>
+        <snippet>Defines all fields displayed to user: pick_teams (string), pick_league, pick_market, pick_ai_probability (formatted %), pick_odds_implied_probability (formatted %), pick_ev_percentage (formatted +/- %), pick_confidence_percentage (0-100), pick_suggested_stake (currency), pick_suggested_odds (decimal).</snippet>
+      </doc>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>Technology Stack - Terminal UI</title>
+        <section>Core Dependencies: Terminal UI</section>
+        <snippet>Rich library (beautiful formatting, tables, colors). Project uses Rich library for beautiful terminal formatting. Terminal output is primary user interface. Display module is part of `/src/bet_bot/display/` directory.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/5-4-create-edge-detection-pipeline.md</path>
+        <title>Story 5.4: Edge Detection Pipeline Output</title>
+        <section>Pick Model Definition</section>
+        <snippet>Pick model provides input to formatter: fixture_id, market, ai_probability, implied_probability, ev_percentage, confidence [0, 100], recommended_stake, suggested_odds. Data flows from edge detection output (Story 5.4) → format_picks_for_display() → terminal output.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/bet_bot/models/analysis.py</path>
+        <kind>data-model</kind>
+        <symbol>Pick</symbol>
+        <lines>143-236</lines>
+        <reason>Core input data model for formatter. Contains all fields needed for display: fixture_id, market, ai_probability, implied_probability, ev_percentage, confidence (0-100 int), recommended_stake (float USD), suggested_odds (decimal).</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>data-model</kind>
+        <symbol>Fixture</symbol>
+        <lines>1-50</lines>
+        <reason>Fixture model needed for team names, league, and kickoff time when formatting fixture cells. May need access to home_team.name, away_team.name, league.league_name, kickoff_time fields.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/display/__init__.py</path>
+        <kind>module-interface</kind>
+        <symbol>display</symbol>
+        <reason>Existing display module package. Currently empty. Story must export format_picks_for_display() from here per AC #10.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/edge/threshold_filter.py</path>
+        <kind>source</kind>
+        <symbol>threshold_filter</symbol>
+        <reason>Edge detection pipeline that produces picks. Understanding this code shows what output format the formatter receives (list[Pick] objects).</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="rich" version=">=13.0" reason="Core UI library for formatted tables, colors, panels. Already in requirements.txt. Required for: Table, Panel, console styling per AC #3-#5" />
+        <package name="pydantic" version=">=2.0" reason="Data validation for Pick model input. Framework already used throughout project." />
+        <package name="bet-bot" reason="Internal package. Imports from models.analysis (Pick), models.fixtures (Fixture, League, Team)" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Module location: MUST be `/src/bet_bot/display/formatter.py` (per project structure in AC #1 and dev notes)
+    - Return type: MUST return string (not print to console directly) per AC #2 - allows for testing and integration
+    - Input model: MUST accept `list[Pick]` from Story 5.4 edge detection pipeline
+    - Rich library: MUST use Rich library for formatting, not manual string building (per tech spec)
+    - Consistency: Display patterns MUST match existing project patterns (see technical-spec.md Display Layer section)
+    - Error handling: MUST handle None/empty list gracefully without raising exceptions per AC #8
+    - Color palette: MUST follow Rich color conventions (green/yellow/red for confidence levels)
+    - Data access: MUST extract fixture details from Pick.fixture_id, may require lookup to Fixture model if not included in Pick
+    - Testing: Tests MUST achieve >80% code coverage on formatter module per Task 7
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>format_picks_for_display</name>
+      <kind>function-signature</kind>
+      <signature>def format_picks_for_display(picks: list[Pick] | None) -> str</signature>
+      <path>src/bet_bot/display/formatter.py</path>
+    </interface>
+    <interface>
+      <name>Display Module Export</name>
+      <kind>module-interface</kind>
+      <signature>from bet_bot.display import format_picks_for_display</signature>
+      <path>src/bet_bot/display/__init__.py</path>
+    </interface>
+    <interface>
+      <name>Input: Pick Model</name>
+      <kind>data-interface</kind>
+      <signature>Pick(fixture_id: str, market: str, ai_probability: float, implied_probability: float, ev_percentage: float, confidence: int, recommended_stake: float, suggested_odds: float)</signature>
+      <path>src/bet_bot/models/analysis.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Unit tests use pytest framework (already in project). Tests should use fixtures for sample Pick objects. Validation of output string format (table structure, column presence, color codes). No actual terminal rendering needed for unit tests - just string validation. Integration tests may include visual verification of terminal output. Mock Rich components if needed for unit test isolation. Target: >80% code coverage on formatter module.</standards>
+    <locations>
+      - Unit tests: `tests/unit/test_terminal_formatter.py` (per AC #7, Task 7)
+      - Integration tests: `tests/integration/test_terminal_formatter_integration.py` (per AC #8, Task 8)
+      - Test fixtures directory: `tests/fixtures/` (for sample Pick objects)
+    </locations>
+    <ideas>
+      AC #1-#3: TestBasicFormatting - Single pick, multiple picks, verify column headers present
+      AC #4: TestEVFormatting - Positive/negative/zero EV formatting with color codes
+      AC #5: TestConfidenceFormatting - High/medium/low badges with boundary cases (80%, 60%, 59%, 61%)
+      AC #6: TestStakeFormatting - Currency formatting ($4.50, $100.00, $0.01, $1,234.56 with thousands)
+      AC #7: TestFixtureFormatting - Team names, league, date/time formatting
+      AC #8: TestEmptyPicksList - Empty list [], None, graceful error handling
+      AC #9: TestSummaryFooter - Statistics calculation (avg EV, avg confidence, total stake), warning for stake > bankroll
+      AC #9: TestEdgeCases - Long team names, unicode, missing optional fields
+      AC #2: TestOutputType - Return value is string, can be printed without errors
+      AC #7: TestIntegration - Visual terminal output with real Pick objects
+    </ideas>
+  </tests>
+</story-context>
