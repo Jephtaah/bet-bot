@@ -85,7 +85,7 @@ development_status:
 
   # PHASE 8: Integration & Testing
   phase-8: backlog
-  8-1-wire-all-layers-together-in-cli: review
+  8-1-wire-all-layers-together-in-cli: done
   8-2-write-unit-tests-for-critical-paths: backlog
   8-3-integration-test-full-pipeline: backlog
   8-4-manual-testing-with-real-data: backlog
