@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="bet-bot/docs/sprint-artifacts/7-3-create-error-display-handler.context.xml" v="1.0">
+  <metadata>
+    <epicId>7</epicId>
+    <storyId>3</storyId>
+    <title>Create Error Display Handler</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-28</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/7-3-create-error-display-handler.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>As a user</asA>
+    <iWant>I want errors to be displayed clearly and helpfully in the terminal</iWant>
+    <soThat>I understand what went wrong and know how to fix it</soThat>
+    <tasks>
+      - [ ] Task 1: Review requirements and error architecture (AC: #1-#12)
+      - [ ] Task 2: Implement display_error() function (AC: #2)
+      - [ ] Task 3: Implement error categorization (AC: #3)
+      - [ ] Task 4: Implement API error handler (AC: #7)
+      - [ ] Task 5: Implement network error handler (AC: #8)
+      - [ ] Task 6: Implement validation error handler (AC: #9)
+      - [ ] Task 7: Implement configuration error handler (AC: #10)
+      - [ ] Task 8: Implement system error handler (AC: #11)
+      - [ ] Task 9: Implement logging integration (AC: #6)
+      - [ ] Task 10: Create unit tests (AC: #1-#12)
+      - [ ] Task 11: Create integration tests (AC: #1-#12)
+      - [ ] Task 12: Create display module exports (AC: #12)
+      - [ ] Task 13: Integration point documentation
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. Create `/src/bet_bot/display/error_handler.py` module with error display logic
+2. Implement `display_error(error: Exception, context: dict) -> str` function that formats errors for terminal
+3. Implement categorization for error types: API, Network, Validation, Configuration, System
+4. Implement user-friendly messages for each error category (not technical jargon)
+5. Implement "contact support" information or documentation links where appropriate
+6. Implement logging of full error details (stack trace, context) while showing simplified version to user
+7. For API errors: show which API failed, suggested retry timing, documentation link
+8. For network errors: show connection issue, suggest troubleshooting steps
+9. For validation errors: show which field failed, expected format, example
+10. For configuration errors: show missing configuration key, file location, setup instructions
+11. For system errors: show error type, suggest environment/permission checks
+12. Export `display_error()` from `/src/bet_bot/display/__init__.py`
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/technical-spec.md</path>
+        <title>bet-bot Technical Specification</title>
+        <section>Module Breakdown - Error Handling, System Architecture Flow</section>
+        <snippet>Error Handling: If API-Football fails → use scrape backup. If scrape fails → continue with missing data (graceful degradation). Log all failures for debugging. Display errors in user-friendly way with actionable next steps.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/7-1-create-terminal-formatter-for-picks.md</path>
+        <title>Story 7.1: Create Terminal Formatter for Picks</title>
+        <section>Acceptance Criteria, Task Completion</section>
+        <snippet>Story 7.1 (done) establishes Rich library integration for terminal formatting. The formatter outputs colored tables with financial data. Error Display Handler (7.3) builds on this with error-specific formatting patterns.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/7-2-implement-results-renderer.md</path>
+        <title>Story 7.2: Implement Results Renderer</title>
+        <section>Error State Implementation, Troubleshooting Steps</section>
+        <snippet>Story 7.2 (done) implements ERROR state rendering with message format: "❌ ANALYSIS FAILED" | error type | troubleshooting steps | logging location. Error Handler (7.3) provides the underlying display_error() function to support error state rendering.</snippet>
+      </doc>
+      <doc>
+        <path>src/bet_bot/exceptions.py</path>
+        <title>Exception Hierarchy Definition</title>
+        <section>Exception Classes, Error Categories</section>
+        <snippet>BetBotError (base) → APIError (APIAuthenticationError, APIRateLimitError, APINotFoundError, APIServerError), DataValidationError, DataStaleError, ScraperError, OpenAIError. Each exception includes context: url, status_code, response_body, field, value, reason, etc.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/bet_bot/display/formatter.py</path>
+        <kind>module</kind>
+        <symbol>format_picks_for_display</symbol>
+        <reason>Story 7.1 completed: Rich library integration pattern for terminal formatting. Error Handler should follow similar pattern with error-specific styling (colors, icons, panels).</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/display/renderer.py</path>
+        <kind>module</kind>
+        <symbol>render_analysis_results, ERROR state formatting</symbol>
+        <lines>Entire file</lines>
+        <reason>Story 7.2 completed: Implements error state rendering with "❌ ANALYSIS FAILED" header and troubleshooting. Error Handler provides the underlying display_error() function that can be called from renderer's ERROR state handler.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/exceptions.py</path>
+        <kind>module</kind>
+        <symbol>APIError, APIAuthenticationError, APIRateLimitError, APIServerError, DataValidationError, DataStaleError, ScraperError, OpenAIError</symbol>
+        <reason>All custom exception classes that Error Handler must detect and categorize. Error Handler's _categorize_error() function will inspect exception types and attributes from this hierarchy.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/utils/logging.py</path>
+        <kind>module</kind>
+        <symbol>setup_logging</symbol>
+        <reason>Logging configuration from Story 1.5. Error Handler must integrate with this for logging full error details (stack traces, context) to ~/.bet-bot/logs/ while showing simplified message to user.</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/display/__init__.py</path>
+        <kind>module</kind>
+        <symbol>__all__ exports</symbol>
+        <reason>Must export display_error() alongside existing formatter and renderer exports. Verify no circular imports.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="rich" reason="Terminal formatting, colors, panels, tables - already used in stories 7.1, 7.2" />
+        <package name="httpx" reason="Exception types: TimeoutException, ConnectError, NetworkError, HTTPStatusError from httpx library" />
+        <package name="pydantic" reason="ValidationError exception type for data validation errors" />
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>
+      <name>Exception Type Detection</name>
+      <description>Must handle exception types from: httpx (TimeoutException, ConnectError, NetworkError, HTTPStatusError), pydantic (ValidationError), built-ins (KeyError, ValueError, OSError, PermissionError, RuntimeError), and custom exceptions (APIError subclasses, DataValidationError, etc.)</description>
+    </constraint>
+    <constraint>
+      <name>API Key Sensitivity</name>
+      <description>NEVER log or display API keys in error messages. Use masked format (first 4 chars + "..." + last 4 chars) if API key is mentioned.</description>
+    </constraint>
+    <constraint>
+      <name>Logging Integration</name>
+      <description>Full error details (stack trace, context dict, system info) must be logged to ~/.bet-bot/logs/ with timestamp. User sees only simplified version in terminal. Log file path shown in error message.</description>
+    </constraint>
+    <constraint>
+      <name>User-Friendly Language</name>
+      <description>Error messages must use plain language without technical jargon. Include actionable next steps (retry timing, documentation links, file locations, troubleshooting steps) in each category.</description>
+    </constraint>
+    <constraint>
+      <name>Module Location</name>
+      <description>Error Handler module must be in /src/bet_bot/display/ directory, following naming pattern of formatter.py and renderer.py. File: error_handler.py</description>
+    </constraint>
+    <constraint>
+      <name>Return Type</name>
+      <description>display_error(error: Exception, context: dict | None = None) must return formatted error string, NOT print to console. Caller (CLI or renderer) decides when to print.</description>
+    </constraint>
+    <constraint>
+      <name>Error Categories</name>
+      <description>Exactly 5 categories: API, Network, Validation, Configuration, System. Each has dedicated formatter function (_format_api_error, _format_network_error, etc.) with category-specific guidance.</description>
+    </constraint>
+    <constraint>
+      <name>Rich Library Usage</name>
+      <description>Follow existing patterns from stories 7.1 (formatter) and 7.2 (renderer). Use Rich for: colored text ([green]/[red]), Panel for sections, emoji icons (❌, ⚠️, etc.). Consistent with project styling.</description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>display_error() Main Function</name>
+      <kind>function signature</kind>
+      <signature>def display_error(error: Exception, context: dict | None = None) -> str</signature>
+      <path>src/bet_bot/display/error_handler.py</path>
+      <description>Main entry point. Takes any exception and optional context dict. Returns formatted error message string. Detects error category and calls appropriate formatter (_format_api_error, _format_network_error, etc.).</description>
+    </interface>
+    <interface>
+      <name>_categorize_error() Helper</name>
+      <kind>function signature</kind>
+      <signature>def _categorize_error(error: Exception) -> str</signature>
+      <path>src/bet_bot/display/error_handler.py</path>
+      <description>Detects error category by inspecting exception type and attributes. Returns: "api", "network", "validation", "configuration", "system", or "unknown".</description>
+    </interface>
+    <interface>
+      <name>_format_api_error() Handler</name>
+      <kind>function signature</kind>
+      <signature>def _format_api_error(error: Exception, context: dict) -> str</signature>
+      <path>src/bet_bot/display/error_handler.py</path>
+      <description>Formats API errors (APIError, APIAuthenticationError, APIRateLimitError, APIServerError, APINotFoundError, HTTPStatusError). Shows: which API failed, status code, suggested retry timing, documentation links.</description>
+    </interface>
+    <interface>
+      <name>_format_network_error() Handler</name>
+      <kind>function signature</kind>
+      <signature>def _format_network_error(error: Exception, context: dict) -> str</signature>
+      <path>src/bet_bot/display/error_handler.py</path>
+      <description>Formats network errors (TimeoutException, ConnectError, NetworkError). Shows: timeout duration or connection type, troubleshooting steps, API status links.</description>
+    </interface>
+    <interface>
+      <name>_format_validation_error() Handler</name>
+      <kind>function signature</kind>
+      <signature>def _format_validation_error(error: Exception, context: dict) -> str</signature>
+      <path>src/bet_bot/display/error_handler.py</path>
+      <description>Formats validation errors (ValidationError, DataValidationError). Shows: field name, expected format, example valid value, type constraints.</description>
+    </interface>
+    <interface>
+      <name>_format_config_error() Handler</name>
+      <kind>function signature</kind>
+      <signature>def _format_config_error(error: Exception, context: dict) -> str</signature>
+      <path>src/bet_bot/display/error_handler.py</path>
+      <description>Formats config errors (KeyError for missing env vars, ValueError for invalid config). Shows: missing key name, .env file path, setup instructions, list of required/optional keys.</description>
+    </interface>
+    <interface>
+      <name>_format_system_error() Handler</name>
+      <kind>function signature</kind>
+      <signature>def _format_system_error(error: Exception, context: dict) -> str</signature>
+      <path>src/bet_bot/display/error_handler.py</path>
+      <description>Formats system errors (OSError, PermissionError, FileNotFoundError, RuntimeError). Shows: error type, affected file/directory, troubleshooting steps (permissions, disk space, etc.).</description>
+    </interface>
+    <interface>
+      <name>_log_full_error() Logger</name>
+      <kind>function signature</kind>
+      <signature>def _log_full_error(error: Exception, context: dict | None = None) -> str</signature>
+      <path>src/bet_bot/display/error_handler.py</path>
+      <description>Logs full error details to ~/.bet-bot/logs/ with timestamp. Captures: stack trace, context dict, system info (Python version, OS, memory). Returns log file path for user notification.</description>
+    </interface>
+    <interface>
+      <name>display/__init__.py Export</name>
+      <kind>module export</kind>
+      <signature>from bet_bot.display.error_handler import display_error; __all__ = ["...", "display_error"]</signature>
+      <path>src/bet_bot/display/__init__.py</path>
+      <description>Export display_error() for use by Story 8.1 (CLI integration) and Story 7.2 (renderer error state). Keep existing exports for formatter and renderer.</description>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+Error display uses pytest unit tests and integration tests with Rich library compatibility. Test patterns follow Story 7.1/7.2 conventions. Focus: exception type detection, message formatting (no crashes, proper string return), logging integration (file creation), security (no API keys in output).
+    </standards>
+    <locations>
+/tests/unit/test_error_handler.py (unit tests for all display functions)
+/tests/integration/test_error_handler_integration.py (integration tests with real exceptions and logging)
+    </locations>
+    <ideas>
+- **Unit tests** (test_error_handler.py):
+  - Display error main function with various exception types
+  - Error categorization for all 5 categories (API, Network, Validation, Config, System)
+  - API error formatting: each subtype (auth, rate limit, server, timeout)
+  - Network error formatting: timeout vs connection refused vs DNS errors
+  - Validation error formatting: Pydantic ValidationError, field extraction
+  - Configuration error formatting: missing keys, setup instructions
+  - System error formatting: permission errors, file not found, disk errors
+  - Logging integration: verify log file created, full trace present, no API keys
+  - Edge cases: None context, empty error message, missing error attributes
+  - Output format: no exceptions raised, proper string return, Rich formatting preserved
+
+- **Integration tests** (test_error_handler_integration.py):
+  - Real exception objects from actual API failures (using fixtures)
+  - Integration with renderer (error state calls display_error)
+  - Full pipeline error scenarios (fetch fails, parse fails, API fails)
+  - Context passing from different pipeline stages (source API, retry count)
+  - Concurrent error handling (multiple errors in parallel)
+  - Logging to actual ~/.bet-bot/logs/ with proper permissions
+
+- **Coverage goal**: >90% code coverage of error_handler.py
+    </ideas>
+  </tests>
+</story-context>
