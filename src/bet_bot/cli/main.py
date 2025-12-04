@@ -102,8 +102,8 @@ async def _run_analysis_pipeline(
 
     Args:
         bankroll: User's betting bankroll in USD
-        threshold: EV threshold percentage (default 5.0, currently not used - TODO)
-        league: Optional league filter (currently not used - TODO)
+        threshold: EV threshold percentage (default 5.0, passed to detect_edges for filtering)
+        league: Optional league filter (passed to detect_edges to filter by league)
 
     Returns:
         Tuple of (picks or None, data_quality tracking dict)
@@ -112,9 +112,8 @@ async def _run_analysis_pipeline(
         Exception: Any uncaught exceptions bubble up to caller for top-level handling
 
     Note:
-        threshold and league parameters are accepted but not yet implemented.
-        They will be passed to detect_edges once that function is updated.
-        Currently detect_edges uses hardcoded 5% threshold and all leagues.
+        Both threshold and league parameters are implemented and passed through
+        to detect_edges for dynamic threshold filtering and league-based filtering.
     """
     data_quality: dict[str, dict[str, Any]] = {}
     timing: dict[str, float] = {}
@@ -257,16 +256,16 @@ async def _run_analysis_pipeline(
     logger.info("=" * 80)
     start_phase = time.perf_counter()
     try:
-        # Note: threshold and league_filter will be added in future iteration
-        # Currently detect_edges uses 5% threshold and all leagues
-        typer.echo(f"⚡ Detecting edges (threshold: 5% fixed)...")
+        typer.echo(f"⚡ Detecting edges (threshold: {threshold}%)...")
         logger.info(
-            f"Starting Phase 4: Edge detection (threshold=5%, all leagues)"
+            f"Starting Phase 4: Edge detection (threshold={threshold}%, league_filter={league or 'all'})"
         )
 
         picks = await detect_edges(
             fixtures=analyzed_fixtures,
             bankroll=bankroll,
+            threshold=threshold,
+            league_filter=league,
         )
 
         elapsed = time.perf_counter() - start_phase
