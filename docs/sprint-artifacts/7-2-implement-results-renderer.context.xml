@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>7</epicId>
+    <storyId>2</storyId>
+    <title>Implement Results Renderer</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-28T14:35:00Z</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/7-2-implement-results-renderer.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>As a user</asA>
+    <iWant>I want to see the final analysis results displayed with clear success/failure states and helpful guidance</iWant>
+    <soThat>I understand what picks (if any) are available and what to do next</soThat>
+    <tasks>
+- [ ] Task 1: Review requirements and architecture (AC: #1-#11)
+- [ ] Task 2: Implement render_analysis_results() function (AC: #2, #8-#10)
+- [ ] Task 3: Implement PICKS FOUND state (AC: #3, #8)
+- [ ] Task 4: Implement NO PICKS state (AC: #4)
+- [ ] Task 5: Implement NO MATCHES TODAY state (AC: #5)
+- [ ] Task 6: Implement ERROR state (AC: #6)
+- [ ] Task 7: Implement DEGRADED state (AC: #7)
+- [ ] Task 8: Implement data quality notes (AC: #9)
+- [ ] Task 9: Implement next steps section (AC: #10)
+- [ ] Task 10: Create unit tests (AC: #1-#11)
+- [ ] Task 11: Create integration tests (AC: #1-#11)
+- [ ] Task 12: Create display module exports (AC: #11)
+- [ ] Task 13: Integration point documentation
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. Create `/src/bet_bot/display/renderer.py` module with main rendering logic
+2. Implement `render_analysis_results(picks: list[Pick], bankroll: float, data_quality: dict) -> str` function
+3. Implement success state: "PICKS FOUND" - display 1+ recommendations with formatted table
+4. Implement empty state: "NO PICKS AVAILABLE" - explain threshold not met with helpful message
+5. Implement no matches state: "NO MATCHES TODAY" - no fixtures available to analyze
+6. Implement error state: "ERROR" - display critical failure with troubleshooting steps
+7. Implement degraded state: "DEGRADED SERVICE" - partial data failure but partial results
+8. Add summary section with statistics: count, total stake, expected ROI calculation
+9. Add data quality notes: show which data sources succeeded/failed
+10. Add next steps section: actionable guidance based on result state
+11. Export `render_analysis_results()` from `/src/bet_bot/display/__init__.py`
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/requirements.md</path>
+        <title>bet-bot Requirements Document</title>
+        <section>US-6: Display Recommendations with Full Transparency</section>
+        <snippet>For each pick, display: Fixture details, Data inputs used, AI's probability estimate + reasoning, Odds-implied probability, Edge % calculation, Confidence %, Recommended market, Suggested stake based on bankroll + EV</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/technical-spec.md</path>
+        <title>bet-bot Technical Specification</title>
+        <section>Display Layer (Module Breakdown #6)</section>
+        <snippet>Purpose: Render results to terminal. Modules: formatter.py (formats picks for terminal display), renderer.py (uses rich for beautiful output), error_handler.py (displays error states gracefully)</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/ui-spec.md</path>
+        <title>bet-bot UI/Display Specification</title>
+        <section>Output States (States 1-5)</section>
+        <snippet>Defines five output states: State 1 (Successful with picks), State 2 (No picks available), State 3 (No matches today), State 4 (API failure/error), State 5 (Graceful degradation). Includes component details, typography rules, and color scheme</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/7-1-create-terminal-formatter-for-picks.md</path>
+        <title>Story 7.1: Create Terminal Formatter for Picks (COMPLETED)</title>
+        <section>Completion Notes and Architecture Alignment</section>
+        <snippet>Story 7.1 implementation complete with formatter.format_picks_for_display() function. Outputs Rich-formatted table string. Story 7.2 renderer will consume this output and wrap with state handling, summary, and next steps</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/data-dictionary.md</path>
+        <title>Data Dictionary</title>
+        <section>Data freshness requirements and quality metrics</section>
+        <snippet>Fixtures: real-time, Odds: max 1h stale, Form: max 24h stale, Injuries: max 12h stale, H2H: static (no freshness check)</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/bet_bot/display/__init__.py</path>
+        <kind>module</kind>
+        <symbol>__init__</symbol>
+        <reason>Existing display module exports. Story 7.2 will add render_analysis_results() export alongside existing format_picks_for_display()</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/display/formatter.py</path>
+        <kind>module</kind>
+        <symbol>format_picks_for_display, _format_fixture_cell, _format_ev_cell, _format_confidence_cell, _format_stake_cell</symbol>
+        <lines>1-292</lines>
+        <reason>Story 7.1 implementation. Renderer (Story 7.2) will consume format_picks_for_display() output for PICKS_FOUND state and use its helper functions</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/analysis.py</path>
+        <kind>module</kind>
+        <symbol>Pick, MarketAnalysis, AIAnalysis</symbol>
+        <reason>Pick model definition with fields: fixture_id, market, ai_probability, implied_probability, ev_percentage, confidence, recommended_stake, suggested_odds</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/models/fixtures.py</path>
+        <kind>module</kind>
+        <symbol>Fixture, Team, League</symbol>
+        <reason>Fixture model with home_team, away_team, league, kickoff_time fields. May be used by renderer for enhanced display</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/analysis/edge/pipeline.py</path>
+        <kind>module</kind>
+        <symbol>detect_edges, EdgeDetectionResult</symbol>
+        <reason>Edge detection pipeline (Story 5.4) produces list[Pick] and data_quality dict. These are renderer's inputs</reason>
+      </artifact>
+      <artifact>
+        <path>src/bet_bot/utils/logging.py</path>
+        <kind>module</kind>
+        <symbol>setup_logging, logger</symbol>
+        <reason>Logging pattern for error messages and debug output in renderer module</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <python>
+        <package name="rich" version=">=13.0" reason="Terminal styling: Panel, Table, Console for output rendering"/>
+        <package name="pydantic" version=">=2.0" reason="Pick model validation and data handling"/>
+        <package name="typing" version="built-in" reason="Type hints for function signatures"/>
+      </python>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Use Rich library for all terminal output (Panel, Table, Console) consistent with Story 7.1 formatter</constraint>
+    <constraint type="pattern">Renderer function must return str (not print directly) for testability and integration with CLI</constraint>
+    <constraint type="pattern">Follow UI spec color scheme: green for success, yellow for warnings, red for errors, cyan for headers</constraint>
+    <constraint type="pattern">All state handlers must be defensive: check for missing/None data before accessing fields</constraint>
+    <constraint type="pattern">Data quality dict keys: 'api_football', 'espn', 'flashscore', 'openai', 'injuries' with status: 'success'|'failed' and optional latency/record_counts</constraint>
+    <constraint type="requirement">Threshold for recommendation: EV > 5% (non-negotiable per requirements.md)</constraint>
+    <constraint type="requirement">Minimum confidence for recommendation: based on data quality assessment (confidence scoring from Story 5.3)</constraint>
+    <constraint type="output">Output must fit 80-column terminal without horizontal scroll (from UI spec)</constraint>
+    <constraint type="testing">Unit tests must cover all 5 output states with realistic test data (50+ tests, 85% coverage target)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>render_analysis_results</name>
+      <kind>function signature</kind>
+      <signature>async def render_analysis_results(picks: list[Pick], bankroll: float, data_quality: dict[str, dict[str, Any]]) -> str</signature>
+      <path>src/bet_bot/display/renderer.py</path>
+      <reason>Main entry point for Story 7.2. Called by Story 8.1 (CLI integration) to render final results. Returns Rich-formatted string for console display</reason>
+    </interface>
+    <interface>
+      <name>format_picks_for_display</name>
+      <kind>function signature</kind>
+      <signature>def format_picks_for_display(picks: list[Pick] | None = None, fixtures_map: dict[str, Any] | None = None) -> str</signature>
+      <path>src/bet_bot/display/formatter.py (Story 7.1)</path>
+      <reason>Renderer consumes this formatter output for PICKS_FOUND state display. Returns formatted table string</reason>
+    </interface>
+    <interface>
+      <name>Pick</name>
+      <kind>Pydantic model</kind>
+      <signature>class Pick(BaseModel): fixture_id: str, market: str, ai_probability: float, implied_probability: float, ev_percentage: float, confidence: float, recommended_stake: float, suggested_odds: float</signature>
+      <path>src/bet_bot/models/analysis.py</path>
+      <reason>Data model representing a betting recommendation. Renderer receives list[Pick] from edge detection pipeline</reason>
+    </interface>
+    <interface>
+      <name>data_quality dict</name>
+      <kind>dictionary structure</kind>
+      <signature>dict[str, dict[str, Any]] with keys: 'api_football', 'espn', 'flashscore', 'openai', 'injuries' and values: {'status': 'success'|'failed', 'latency_ms'?: int, 'record_count'?: int, 'error'?: str}</signature>
+      <path>From consolidation pipeline (Story 3.2-3.3)</path>
+      <reason>Tracks which data sources succeeded/failed. Renderer uses this for data quality notes section and state determination (DEGRADED vs PICKS_FOUND)</reason>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+The project uses pytest for testing. Tests should follow Story 7.1 pattern: structured test classes by feature/scenario, fixtures for reusable data, descriptive test names that document expected behavior. Type hints required on all test functions. Logging verification using caplog fixture. Output validation by examining rendered string content. Color code validation by checking for Rich markup tags in output. Minimum 85% code coverage target for renderer module. All 5 output states must have corresponding test cases with realistic test data.
+    </standards>
+    <locations>
+tests/unit/test_results_renderer.py - Unit tests (50+ tests covering all states, helpers, edge cases)
+tests/integration/test_results_renderer_integration.py - Integration tests (20+ tests with real data flow)
+    </locations>
+    <ideas>
+AC-1 (File creation): Test file exists at src/bet_bot/display/renderer.py ✓
+AC-2 (Function signature): Test render_analysis_results() accepts (picks, bankroll, data_quality) and returns str ✓
+AC-3 (PICKS_FOUND state): Test with 1, 3, 5+ picks; verify formatted table from Story 7.1 formatter is included; verify summary stats calculated correctly; verify green styling applied ✓
+AC-4 (NO_PICKS state): Test with empty picks list; verify explains threshold not met; suggests threshold lowering or league expansion; yellow/neutral color ✓
+AC-5 (NO_MATCHES state): Test with 0 fixtures analyzed; verify "NO MATCHES TODAY" header; suggests checking back tomorrow; blue/neutral color ✓
+AC-6 (ERROR state): Test API failure scenarios (API-Football down, OpenAI rate limit, network error); verify error type displayed; troubleshooting steps provided; log file location shown; red color ✓
+AC-7 (DEGRADED state): Test with partial data failure (e.g., ESPN scraper timeout, injury data stale); verify partial results still displayed with reduced confidence warning; yellow warning color; shows which sources failed ✓
+AC-8 (Summary stats): Test calculation accuracy: total picks count, average EV (sum/count), average confidence (sum/count), total stake (sum all), expected ROI (total_stake × avg_EV_pct) ✓
+AC-9 (Data quality notes): Test display of all 5+ data sources; verify success/failure status for each; latency and record counts shown if available; overall quality percentage; table or bullet format ✓
+AC-10 (Next steps): Test different guidance for each state (PICKS: place bets; NO_PICKS: wait for better opportunities; ERROR: verify API keys; DEGRADED: review data quality) ✓
+AC-11 (Module export): Test render_analysis_results() is exported from src/bet_bot/display/__init__.py and accessible via "from bet_bot.display import render_analysis_results" ✓
+    </ideas>
+  </tests>
+
+</story-context>
