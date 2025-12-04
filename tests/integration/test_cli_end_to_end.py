@@ -24,7 +24,6 @@ from typer.testing import CliRunner
 from bet_bot.cli.main import app
 from bet_bot.models.analysis import AIAnalysis, MarketAnalysis, Pick
 from bet_bot.models.fixtures import Fixture, League, Team
-from bet_bot.models.odds import Odds
 from bet_bot.models.form import TeamForm
 from bet_bot.models.injuries import Injury
 
@@ -53,11 +52,13 @@ def create_mock_fixture(fixture_id: str = "123") -> Fixture:
             league_season=2024
         ),
         status="NS",  # Not started
-        odds=Odds(
-            home_win=1.80,
-            draw=3.50,
-            away_win=4.20
-        ),
+        odds={
+            "pinnacle": {
+                "home": 1.80,
+                "draw": 3.50,
+                "away": 4.20
+            }
+        },
         form_data=None,
         injury_data=None,
         h2h_history=None,
@@ -362,7 +363,7 @@ class TestAcceptanceCriteria:
             call_order.append("analyze")
             return [create_mock_analyzed_fixture()]
 
-        async def mock_detect_edges(fixtures, bankroll):
+        async def mock_detect_edges(fixtures, bankroll, threshold=5.0, league_filter=None):
             call_order.append("edge_detect")
             return [create_mock_pick()]
 
@@ -471,13 +472,13 @@ class TestAcceptanceCriteria:
         picks = [create_mock_pick()]
 
         with patch("bet_bot.cli.main.asyncio.run") as mock_run:
-            mock_run.return_value = (picks, {})
+            # First call: _run_analysis_pipeline returns (picks, data_quality)
+            # Second call: render_analysis_results returns formatted output
+            mock_run.side_effect = [(picks, {}), "Formatted output"]
 
-            with patch("bet_bot.cli.main.render_analysis_results") as mock_render:
-                mock_render.return_value = "Formatted output"
+            result = runner.invoke(app, ["analyze", "--bankroll", "1000"])
 
-                result = runner.invoke(app, ["analyze", "--bankroll", "1000"])
-
-                # Verify render_analysis_results was called
-                mock_render.assert_called_once()
-                assert "Formatted output" in result.output
+            # Verify asyncio.run was called twice (once for pipeline, once for render)
+            assert mock_run.call_count == 2
+            assert result.exit_code == 0
+            assert "Formatted output" in result.output
