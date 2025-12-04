@@ -275,13 +275,15 @@ def _log_summary_statistics(summary: dict[str, Any]) -> None:
 async def detect_edges(
     fixtures: list[Fixture],
     bankroll: float = 1000.0,
+    threshold: float | None = None,
+    league_filter: str | None = None,
 ) -> list[Pick] | str:
     """
     Main edge detection pipeline orchestrator.
 
     Runs the complete edge detection pipeline:
     1. Calculate EV for each market (Story 5.1)
-    2. Filter by 5% EV threshold (Story 5.2)
+    2. Filter by EV threshold (Story 5.2)
     3. Score confidence based on data quality (Story 5.3)
     4. Transform results into Pick objects
     5. Calculate recommended stakes
@@ -290,21 +292,25 @@ async def detect_edges(
     Args:
         fixtures: List of Fixture objects with ai_analysis populated (from Story 4.4)
         bankroll: Total betting bankroll in currency units (default: $1000)
+        threshold: EV threshold percentage (default: None uses 5.0). Range: 0.0-100.0
+        league_filter: Optional league name to filter fixtures (e.g., "Premier League")
 
     Returns:
-        - list[Pick]: List of recommended betting picks (if any exist above 5% threshold)
+        - list[Pick]: List of recommended betting picks (if any exist above threshold)
         - str: User-friendly NO_PICKS message if no picks above threshold
 
     Raises:
-        ValueError: If fixtures is empty or bankroll is invalid
+        ValueError: If fixtures is empty, bankroll is invalid, or threshold is out of range
 
     Example:
         >>> picks = await detect_edges(
         ...     fixtures=fixtures_with_ai_analysis,
-        ...     bankroll=1000.0
+        ...     bankroll=1000.0,
+        ...     threshold=7.5,
+        ...     league_filter="Premier League"
         ... )
         >>> if isinstance(picks, str):
-        ...     print(picks)  # "No picks above 5% threshold..."
+        ...     print(picks)  # "No picks above threshold..."
         ... else:
         ...     for pick in picks:
         ...         print(f"{pick.market}: +{pick.ev_percentage:.1f}% EV")
@@ -312,9 +318,18 @@ async def detect_edges(
     Notes:
         - Ensures exact pipeline order: EV → threshold → confidence
         - Graceful degradation: individual pick failures don't block batch
-        - Validates that returned picks meet 5% EV minimum (discipline enforcement)
+        - Validates that returned picks meet threshold minimum (discipline enforcement)
         - Logs progress at each step with detailed metrics
+        - Default threshold is 5.0% if not specified
     """
+    # Set default threshold if not provided
+    if threshold is None:
+        threshold = 5.0
+
+    # Validate threshold range
+    if threshold < 0.0 or threshold > 100.0:
+        raise ValueError(f"Invalid threshold: {threshold}% (must be 0.0-100.0)")
+
     if not fixtures:
         logger.warning("detect_edges called with empty fixtures list")
         return []
@@ -324,13 +339,27 @@ async def detect_edges(
 
     logger.info(
         f"Starting edge detection pipeline",
-        extra={"fixture_count": len(fixtures), "bankroll": bankroll},
+        extra={"fixture_count": len(fixtures), "bankroll": bankroll, "threshold": threshold, "league_filter": league_filter},
     )
+
+    # Apply league filter if specified
+    fixtures_to_analyze = fixtures
+    if league_filter:
+        fixtures_to_analyze = [
+            f for f in fixtures
+            if hasattr(f, "league") and hasattr(f.league, "name") and f.league.name == league_filter
+        ]
+        logger.info(
+            f"Applied league filter '{league_filter}': {len(fixtures_to_analyze)} of {len(fixtures)} fixtures"
+        )
+        if not fixtures_to_analyze:
+            logger.warning(f"No fixtures found for league: {league_filter}")
+            return f"📋 NO PICKS AVAILABLE\n\nNo fixtures found for league '{league_filter}'.\n\n💡 Try analyzing all leagues or check league name spelling."
 
     # Step 1: Calculate EV for all markets (Story 5.1)
     logger.debug("Step 1: Calculating EV for all markets")
     try:
-        fixtures_with_ev = await calculate_all_evs(fixtures)
+        fixtures_with_ev = await calculate_all_evs(fixtures_to_analyze)
         all_ev_results = []
         for fixture in fixtures_with_ev:
             if hasattr(fixture, "ev_results"):
@@ -342,24 +371,24 @@ async def detect_edges(
         logger.error(f"Step 1 failed: {str(e)}")
         raise
 
-    # Step 2: Filter by 5% threshold (Story 5.2)
-    logger.debug("Step 2: Filtering by 5% EV threshold")
+    # Step 2: Filter by EV threshold (Story 5.2)
+    logger.debug(f"Step 2: Filtering by {threshold}% EV threshold")
     try:
-        filter_result = await apply_threshold_filter(fixtures_with_ev, threshold_pct=5.0)
+        filter_result = await apply_threshold_filter(fixtures_with_ev, threshold_pct=threshold)
         recommended_filtered_picks = filter_result.get("recommended", [])
 
         if not recommended_filtered_picks:
             logger.warning(
-                f"No picks above 5% threshold found. "
+                f"No picks above {threshold}% threshold found. "
                 f"Found: {filter_result.get('total', 0)} total EV results"
             )
             # Return NO_PICKS message
-            no_picks_msg = no_picks_available_message(all_ev_results, threshold_pct=5.0)
+            no_picks_msg = no_picks_available_message(all_ev_results, threshold_pct=threshold)
             logger.info(f"Returning NO_PICKS message to user")
             return no_picks_msg
 
         logger.info(
-            f"Step 2 Complete: {len(recommended_filtered_picks)} picks above 5% threshold"
+            f"Step 2 Complete: {len(recommended_filtered_picks)} picks above {threshold}% threshold"
         )
     except Exception as e:
         logger.error(f"Step 2 failed: {str(e)}")
