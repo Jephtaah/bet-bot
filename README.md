@@ -25,7 +25,7 @@ A CLI tool that identifies value betting opportunities by analyzing fixture data
 
 ### Step 1: Clone the repository
 ```bash
-git clone <repository-url>
+git clone (https://github.com/Jephtaah/bet-bot)
 cd bet-bot
 ```
 
